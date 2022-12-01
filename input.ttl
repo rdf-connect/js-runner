@@ -1,0 +1,24 @@
+@prefix js: <https://w3id.org/conn/js#> .
+@prefix ws: <https://w3id.org/conn/ws#> .
+@prefix : <https://w3id.org/conn#> .
+
+[] a js:JsChannel;
+  :reader _:jr;
+  :writer _:jw.
+
+_:jr a :JsReaderChannel.
+_:jw a :JsWriterChannel.
+
+_:wsReader a :WsReaderChannel;
+  :wsPort "3000".
+
+_:wsWriter a :WsWriterChannel;
+  :wsUri "ws://localhost:3000".
+
+[] a js:Send;
+  js:msg "Hallo world";
+  js:sendWriter _:wsWriter.
+
+[] a js:Resc;
+  js:rescReader _:wsReader.
+

@@ -1,0 +1,23 @@
+{
+  "name": "js-runner",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node lib/index.js",
+    "watch": "tsc -w"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@comunica/query-sparql": "^2.5.2",
+    "@rdfjs/types": "^1.1.0",
+    "@treecg/connector-all": "^1.0.5",
+    "@types/command-line-args": "^5.2.0",
+    "@types/command-line-usage": "^5.0.2",
+    "command-line-args": "^5.2.1",
+    "command-line-usage": "^6.1.3"
+  }
+}
