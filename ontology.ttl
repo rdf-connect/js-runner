@@ -8,6 +8,7 @@
 js:Echo a js:JsProcess;
   js:file "./echo.js";
   js:function "echo";
+  js:location <>;
   js:mapping [
     a fno:Mapping;
     fno:parameterMapping [
@@ -37,6 +38,7 @@ js:Echo a js:JsProcess;
 js:Send a js:JsProcess;
   js:file "./test.js";
   js:function "send";
+  js:location <>;
   js:mapping [
     a fno:Mapping;
     fno:parameterMapping [
@@ -65,6 +67,7 @@ js:Send a js:JsProcess;
 js:Resc a js:JsProcess;
   js:file "./test.js";
   js:function "resc";
+  js:location <>;
   js:mapping [
     a fno:Mapping;
     fno:parameterMapping [

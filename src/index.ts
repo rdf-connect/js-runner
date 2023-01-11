@@ -10,9 +10,17 @@ import * as path from 'path';
 
 export type Stores = [Store, ...Store[]];
 
-async function importFile(file: string): Promise<Store> {
+async function tryImportFile(file: string, dir?: string): Promise<Store[]> {
+  try {
+    return [await importFile(file, dir)];
+  } catch (ex: any) {
+    return [];
+  }
+}
+
+async function importFile(file: string, dir?: string): Promise<Store> {
   const store = new Store();
-  const parser = new StreamParser();
+  const parser = new StreamParser({ baseIRI: dir });
   const rdfStream = createReadStream(file);
   rdfStream.pipe(parser);
 
@@ -23,12 +31,12 @@ async function importFile(file: string): Promise<Store> {
 type ChannelParts = { [label: string]: any };
 
 type ProcField = { loc: number, value: string };
-type ProcOut = { file: string, func: string };
+type ProcOut = { file: string, func: string, location: string };
 async function handleProcs(store: Stores, readers: ChannelParts, writers: ChannelParts): Promise<{ [label: string]: { [label: string]: ProcField } & ProcOut }> {
   const fields: (keyof ProcOutput)[] = procOutputFields;
   const res = await executeQuery<ProcOutput>(store, procQuery, fields);
 
-  const grouped = merge(res, "subject", "loc", "value", ["func", "file"], (v, k, item) => {
+  const grouped = merge(res, "subject", "loc", "value", ["func", "file", "location"], (v, k, item) => {
     const loc = parseInt(k.value);
     if (item.class?.value === "https://w3id.org/conn#ReaderChannel") {
       return {
@@ -51,6 +59,7 @@ async function handleProcs(store: Stores, readers: ChannelParts, writers: Channe
 
   return grouped;
 }
+
 
 async function handleChannels(store: Stores): Promise<[ChannelParts, ChannelParts]> {
   const readerPromises: Promise<[Stream<string>, string]>[] = [];
@@ -87,7 +96,7 @@ async function handleChannels(store: Stores): Promise<[ChannelParts, ChannelPart
 }
 
 function executeProc(fields: ProcField[], proc: ProcOut) {
-  // const root = path.join(pWd, processorConfig.location || process.cwd(), processorConfig.config.jsFile);
+  process.chdir(proc.location);
   const root = path.join(process.cwd(), proc.file);
   const jsProgram = require(root);
 
@@ -104,9 +113,16 @@ function executeProc(fields: ProcField[], proc: ProcOut) {
 
 async function main() {
   const args = getArgs();
+  const cwd = process.cwd();
 
   // Loading ontologies
-  const ontologies = await Promise.all(args.ontology.map(importFile));
+  const ontologies = (await Promise.all(args.ontologies.map(onto => {
+    const location = path.dirname(
+      path.join(cwd, onto)
+    ) + "/"; // Hmm for some reason when using basename when loading turtle files, <..> removes 2 parts otherwise
+    return tryImportFile(onto, location);
+  }))).flatMap(x => x);
+
   const store = await importFile(args.input);
   const stores = <[Store, ...Store[]]>[store, ...ontologies];
 
@@ -119,6 +135,7 @@ async function main() {
     const procConfig: ProcOut = {
       file: proc.file,
       func: proc.func,
+      location: proc.location,
     };
 
     const fields = Object.values(proc);

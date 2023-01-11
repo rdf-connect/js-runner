@@ -35,6 +35,7 @@ PREFIX : <https://w3id.org/conn#>
     ?tys a js:JsProcess;
       js:file ?file;
       js:function ?func;
+      js:location ?location;
       js:mapping [
         fno:parameterMapping [
           fnom:functionParameter ?path;
@@ -54,11 +55,12 @@ PREFIX : <https://w3id.org/conn#>
     OPTIONAL { ?shape sh:property [ sh:path ?path; sh:class ?class ] }
   }`;
 
-export const procOutputFields: (keyof ProcOutput)[] = ["file", "func", "loc", "value", "class", "datatype", "subject"];
+export const procOutputFields: (keyof ProcOutput)[] = ["file", "func", "loc", "value", "class", "datatype", "subject", "location"];
 
 export type ProcOutput = {
   file: RDF.Literal,
   func: RDF.Literal,
+  location: RDF.NamedNode,
   value: RDF.Term,
   loc: RDF.Literal,
   class?: RDF.Term,

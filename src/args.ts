@@ -3,8 +3,7 @@ import commandLineUsage from "command-line-usage";
 
 const optionDefinitions = [
   { name: 'input', type: String, defaultOption: true, summary: "Specify what input file to start up" },
-
-  { name: 'ontology', alias: 'o', type: String, lazyMultiple: true, description: "Specify what ontology to use", typeLabel: "{underline file}" },
+  { name: 'ontologies', alias: 'o', type: String, multiple: true, description: "Specify what ontology to use", typeLabel: "{underline file}" },
   { name: 'help', alias: 'h', type: Boolean, description: "Display this help message" },
 ];
 
@@ -27,15 +26,15 @@ const sections = [
 ];
 
 export type Args = {
-  ontology: string[],
+  ontologies: string[],
   input: string,
 };
 
 function validArgs(args: any): boolean {
   if (!args.input) return false;
-  if (!args.ontology
-    || !Array.isArray(args.ontology)
-    || !args.ontology.every((x: any) => typeof x === 'string')
+  if (!args.ontologies
+    || !Array.isArray(args.ontologies)
+    || !args.ontologies.every((x: any) => typeof x === 'string')
   ) return false;
 
   return true;
@@ -52,6 +51,7 @@ export function getArgs(): Args {
   try {
     args = commandLineArgs(optionDefinitions);
   } catch (e) {
+    console.error(e);
     printUsage();
   }
 
