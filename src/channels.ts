@@ -2,18 +2,20 @@ import { AllReaderFactory, AllWriterFactory } from "@treecg/connector-all";
 import { Writer, Stream, SimpleStream } from "@treecg/connector-types";
 import { typeNode } from "./util";
 import { WsReaderConfig, WsWriterConfig } from "@treecg/connector-ws";
+import { HttpReaderConfig, HttpWriterConfig } from "@treecg/connector-http";
 
 type Map = { [label: string]: string };
 
+const CONN = "https://w3id.org/conn#";
 function objToWsConfig(obj: Map): WsReaderConfig & WsWriterConfig {
   let port, url, host;
 
-  if (obj["https://w3id.org/conn#wsPort"]) {
-    port = parseInt(obj["https://w3id.org/conn#wsPort"]);
+  if (obj[CONN + "wsPort"]) {
+    port = parseInt(obj[CONN + "wsPort"]);
     url = "ws://0.0.0.0:" + port;
     host = "0.0.0.0";
-  } else if (obj["https://w3id.org/conn#wsUri"]) {
-    url = obj["https://w3id.org/conn#wsUri"];
+  } else if (obj[CONN + "wsUri"]) {
+    url = obj[CONN + "wsUri"];
     const parsed = new URL(url);
     port = parseInt(parsed.port);
     host = parsed.host;
@@ -25,6 +27,35 @@ function objToWsConfig(obj: Map): WsReaderConfig & WsWriterConfig {
     url, port, host
   }
 }
+
+function objToHttpConfig(obj: Map): HttpReaderConfig & HttpWriterConfig {
+  let port, url, host, method;
+
+  if (obj[CONN + "httpPort"]) {
+    port = parseInt(obj[CONN + "httpPort"]);
+    url = "http://0.0.0.0:" + port;
+    host = "0.0.0.0";
+    method = obj[CONN + "httpMethod"]
+  } else if (obj[CONN + "httpEndpoint"]) {
+    url = obj[CONN + "httpEndpoint"];
+    const parsed = new URL(url);
+    port = parseInt(parsed.port);
+    host = parsed.host;
+    method = obj[CONN + "httpMethod"]
+  } else {
+    throw "Nope";
+  }
+
+  method = method || "POST";
+
+  return {
+    url,
+    port,
+    host,
+    method
+  }
+}
+
 
 function getType(obj: Map): string {
   const ty = obj[typeNode];
@@ -67,6 +98,11 @@ export function createReader(obj: Map): Promise<Stream<string>> {
         type: "ws",
         config: objToWsConfig(obj),
       });
+    case CONN + "HttpReaderChannel":
+      return readerFactory.build({
+        type: "http",
+        config: objToHttpConfig(obj),
+      });
 
     case "https://w3id.org/conn#JsReaderChannel":
       return createJsReader(obj.reader);
@@ -83,6 +119,12 @@ export function createWriter(obj: Map): Promise<Writer<string>> {
       return writerFactory.build({
         type: "ws",
         config: objToWsConfig(obj),
+      });
+
+    case CONN + "HttpWriterChannel":
+      return writerFactory.build({
+        type: "http",
+        config: objToHttpConfig(obj),
       });
 
     case "https://w3id.org/conn#JsWriterChannel":

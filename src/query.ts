@@ -1,15 +1,15 @@
-import { Store } from "n3";
 import * as RDF from "rdf-js";
 import { QueryEngine } from "@comunica/query-sparql";
 import { Keyed } from "./util";
+import { Stores } from ".";
 
 const engine = new QueryEngine();
 
-export async function executeQuery<T extends Keyed<T>>(store: Store, query: string, fields: (keyof T)[]): Promise<T[]> {
+export async function executeQuery<T extends Keyed<T>>(store: Stores, query: string, fields: (keyof T)[]): Promise<T[]> {
   const out = [];
 
   const bindingsStream = await engine.queryBindings(query, {
-    sources: [store],
+    sources: store,
   });
 
   for (let match of await bindingsStream.toArray()) {

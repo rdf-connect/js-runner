@@ -8,19 +8,23 @@ import { Writer, Stream } from "@treecg/connector-types";
 
 import * as path from 'path';
 
-function importFile(store: Store, file: string): Promise<void> {
+export type Stores = [Store, ...Store[]];
+
+async function importFile(file: string): Promise<Store> {
+  const store = new Store();
   const parser = new StreamParser();
   const rdfStream = createReadStream(file);
   rdfStream.pipe(parser);
 
-  return new Promise(res => store.import(parser).on('end', res));
+  await new Promise(res => store.import(parser).on('end', res));
+  return store;
 }
 
 type ChannelParts = { [label: string]: any };
 
 type ProcField = { loc: number, value: string };
 type ProcOut = { file: string, func: string };
-async function handleProcs(store: Store, readers: ChannelParts, writers: ChannelParts): Promise<{ [label: string]: { [label: string]: ProcField } & ProcOut }> {
+async function handleProcs(store: Stores, readers: ChannelParts, writers: ChannelParts): Promise<{ [label: string]: { [label: string]: ProcField } & ProcOut }> {
   const fields: (keyof ProcOutput)[] = procOutputFields;
   const res = await executeQuery<ProcOutput>(store, procQuery, fields);
 
@@ -48,7 +52,7 @@ async function handleProcs(store: Store, readers: ChannelParts, writers: Channel
   return grouped;
 }
 
-async function handleChannels(store: Store): Promise<[ChannelParts, ChannelParts]> {
+async function handleChannels(store: Stores): Promise<[ChannelParts, ChannelParts]> {
   const readerPromises: Promise<[Stream<string>, string]>[] = [];
   const writerPromises: Promise<[Writer<string>, string]>[] = [];
 
@@ -62,7 +66,7 @@ async function handleChannels(store: Store): Promise<[ChannelParts, ChannelParts
   }
 
   const writers = await executeQuery<WriterOutput>(store, writerQuery, fields);
-  const wGrouped = merge(writers, "writer", "prop", "value", ["reader"])
+  const wGrouped = merge(writers, "writer", "prop", "value", ["writer"])
 
   for (let id in wGrouped) {
     writerPromises.push(createWriter(wGrouped[id]).then(x => [x, id]));
@@ -100,16 +104,15 @@ function executeProc(fields: ProcField[], proc: ProcOut) {
 
 async function main() {
   const args = getArgs();
-  const store = new Store();
 
   // Loading ontologies
-  await Promise.all(args.ontology.map(f => importFile(store, f)));
+  const ontologies = await Promise.all(args.ontology.map(importFile));
+  const store = await importFile(args.input);
+  const stores = <[Store, ...Store[]]>[store, ...ontologies];
 
-  await importFile(store, args.input);
+  const [readers, writers] = await handleChannels(stores);
 
-  const [readers, writers] = await handleChannels(store);
-
-  const procs = await handleProcs(store, readers, writers);
+  const procs = await handleProcs(stores, readers, writers);
 
   const execs = [];
   for (let proc of Object.values(procs)) {

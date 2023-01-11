@@ -44,4 +44,5 @@ export function merge<
   }
 
   return outs;
-} 
+}
+
