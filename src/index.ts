@@ -6,6 +6,8 @@ import { merge } from "./util";
 import { createReader, createWriter } from "./channels";
 import { Writer, Stream } from "@treecg/connector-types";
 
+import Parallel from 'paralleljs';
+
 import * as path from 'path';
 
 export type Stores = [Store, ...Store[]];
@@ -75,7 +77,7 @@ async function handleChannels(store: Stores): Promise<[ChannelParts, ChannelPart
   }
 
   const writers = await executeQuery<WriterOutput>(store, writerQuery, fields);
-  const wGrouped = merge(writers, "writer", "prop", "value", ["writer"])
+  const wGrouped = merge(writers, "writer", "prop", "value", ["reader"])
 
   for (let id in wGrouped) {
     writerPromises.push(createWriter(wGrouped[id]).then(x => [x, id]));
@@ -95,20 +97,28 @@ async function handleChannels(store: Stores): Promise<[ChannelParts, ChannelPart
   return [readerParts, writerParts];
 }
 
-function executeProc(fields: ProcField[], proc: ProcOut) {
+
+interface Args {
+  fields: ProcField[],
+  procOut: ProcOut,
+}
+function executeProc(args: Args): PromiseLike<any> {
+  const fields = args.fields;
+  const proc = args.procOut;
+
   process.chdir(proc.location);
   const root = path.join(process.cwd(), proc.file);
   const jsProgram = require(root);
 
-  const args = new Array(fields.length);
+  const functionArgs = new Array(fields.length);
 
   for (let field of fields) {
     if (typeof field === "object" && field["loc"] != undefined) {
-      args[field.loc] = field.value;
+      functionArgs[field.loc] = field.value;
     }
   }
 
-  jsProgram[proc.func](...args);
+  return jsProgram[proc.func](...functionArgs);
 }
 
 async function main() {
@@ -117,9 +127,7 @@ async function main() {
 
   // Loading ontologies
   const ontologies = (await Promise.all(args.ontologies.map(onto => {
-    const location = path.dirname(
-      path.join(cwd, onto)
-    ) + "/"; // Hmm for some reason when using basename when loading turtle files, <..> removes 2 parts otherwise
+    const location = path.join(cwd, onto);
     return tryImportFile(onto, location);
   }))).flatMap(x => x);
 
@@ -139,7 +147,12 @@ async function main() {
     };
 
     const fields = Object.values(proc);
-    execs.push(executeProc(<ProcField[]>fields, procConfig))
+
+    const args: Args = { fields: <ProcField[]>fields, procOut: procConfig };
+    execs.push(executeProc(args).then(() => {
+      console.log(`Finished ${procConfig.file}:${procConfig.func}`);
+
+    }))
   }
 
   await Promise.all(execs);

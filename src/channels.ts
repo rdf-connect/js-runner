@@ -3,6 +3,7 @@ import { Writer, Stream, SimpleStream } from "@treecg/connector-types";
 import { typeNode } from "./util";
 import { WsReaderConfig, WsWriterConfig } from "@treecg/connector-ws";
 import { HttpReaderConfig, HttpWriterConfig } from "@treecg/connector-http";
+import { FileReaderConfig, FileWriterConfig } from "@treecg/connector-file";
 
 type Map = { [label: string]: string };
 
@@ -25,6 +26,49 @@ function objToWsConfig(obj: Map): WsReaderConfig & WsWriterConfig {
 
   return {
     url, port, host
+  }
+}
+
+
+
+function parseBool(stringValue: string): boolean {
+  switch (stringValue?.toLowerCase()?.trim()) {
+    case "true":
+    case "yes":
+    case "1":
+      return true;
+
+    case "false":
+    case "no":
+    case "0":
+    case null:
+    case undefined:
+      return false;
+
+    default:
+      return JSON.parse(stringValue);
+  }
+}
+
+function objToFileConfig(obj: Map): FileReaderConfig & FileWriterConfig {
+  const maybePath = obj[CONN + "filePath"];
+  const maybeOnReplace = obj[CONN + "fileOnReplace"];
+  const encoding = obj[CONN + "fileEncoding"];
+  const maybeReadFirstContent = obj[CONN + "fileReadFirstContent"];
+
+  if (!maybePath) { throw `${CONN + "filePath"} is not specified` };
+  const path = maybePath!;
+  const onReplace = parseBool(maybeOnReplace);
+  const readFirstContent = parseBool(maybeReadFirstContent);
+
+
+  return {
+
+    path,
+    onReplace,
+    encoding,
+    readFirstContent
+
   }
 }
 
@@ -103,6 +147,11 @@ export function createReader(obj: Map): Promise<Stream<string>> {
         type: "http",
         config: objToHttpConfig(obj),
       });
+    case CONN + "FileReaderChannel":
+      return readerFactory.build({
+        type: "file",
+        config: objToFileConfig(obj),
+      });
 
     case "https://w3id.org/conn#JsReaderChannel":
       return createJsReader(obj.reader);
@@ -125,6 +174,12 @@ export function createWriter(obj: Map): Promise<Writer<string>> {
       return writerFactory.build({
         type: "http",
         config: objToHttpConfig(obj),
+      });
+
+    case CONN + "FileWriterChannel":
+      return writerFactory.build({
+        type: "file",
+        config: objToFileConfig(obj),
       });
 
     case "https://w3id.org/conn#JsWriterChannel":
