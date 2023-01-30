@@ -5,8 +5,6 @@
 @prefix : <https://w3id.org/conn#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
-
-
 js:Send a js:JsProcess;
   js:file "./test.js";
   js:function "send";
@@ -35,3 +33,4 @@ js:Send a js:JsProcess;
     sh:path js:sendWriter;
     sh:name "Output Channel"
   ].
+

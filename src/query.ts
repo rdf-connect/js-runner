@@ -78,7 +78,7 @@ PREFIX fnom: <https://w3id.org/function/vocabulary/mapping#>
 PREFIX sh: <http://www.w3.org/ns/shacl#>
 PREFIX : <https://w3id.org/conn#> 
                 
-  SELECT * WHERE {
+  SELECT ?subject ?reader ?writer ?tys WHERE {
     ?tys a js:JsProcess;
       js:mapping [
         fno:parameterMapping [
@@ -96,8 +96,6 @@ PREFIX : <https://w3id.org/conn#>
     ?subject a ?tys;
       ?path ?${self}.
 
-    ?${self} ?prop ?value. 
-
     OPTIONAL { [] :reader ?reader; :writer ?writer }
   }
 `;
@@ -106,14 +104,12 @@ PREFIX : <https://w3id.org/conn#>
 export const readerQuery = channelQuery("ReaderChannel", "reader");
 export const writerQuery = channelQuery("WriterChannel", "writer");
 
-export const channelOutputFields: (keyof ChannelOutput<true & false>)[] = ["reader", "writer", "loc", "subject", "prop", "value"];
+export const channelOutputFields: (keyof ChannelOutput<true & false>)[] = ["reader", "writer", "subject", "tys"];
 type ChannelOutput<T extends true | false> = {
   reader: T extends true ? RDF.Term : RDF.Term | undefined,
   writer: T extends false ? RDF.Term : RDF.Term | undefined,
   subject: RDF.Term,
-  prop: RDF.NamedNode,
-  value: RDF.Term,
-  loc: RDF.Term,
+  tys: RDF.Term,
 };
 
 export type ReaderOutput = ChannelOutput<true>;

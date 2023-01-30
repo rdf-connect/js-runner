@@ -6,8 +6,6 @@ import { merge } from "./util";
 import { createReader, createWriter } from "./channels";
 import { Writer, Stream } from "@treecg/connector-types";
 
-import Parallel from 'paralleljs';
-
 import * as path from 'path';
 
 export type Stores = [Store, ...Store[]];
@@ -70,17 +68,14 @@ async function handleChannels(store: Stores): Promise<[ChannelParts, ChannelPart
   const fields = channelOutputFields;
   const readers = await executeQuery<ReaderOutput>(store, readerQuery, fields);
 
-  const rGrouped = merge(readers, "reader", "prop", "value", ["reader"])
-
-  for (let id in rGrouped) {
-    readerPromises.push(createReader(rGrouped[id]).then(x => [x, id]));
+  for (let reader of readers) {
+    readerPromises.push(createReader(reader.reader, store, reader.reader?.value).then(x => [x, reader.reader.value]));
   }
 
   const writers = await executeQuery<WriterOutput>(store, writerQuery, fields);
-  const wGrouped = merge(writers, "writer", "prop", "value", ["reader"])
 
-  for (let id in wGrouped) {
-    writerPromises.push(createWriter(wGrouped[id]).then(x => [x, id]));
+  for (let writer of writers) {
+    writerPromises.push(createWriter(writer.writer, store, writer.reader?.value).then(x => [x, writer.writer.value]));
   }
 
   const [rs, ws] = await Promise.all([Promise.all(readerPromises), Promise.all(writerPromises)]);

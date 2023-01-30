@@ -3,22 +3,26 @@
 @prefix : <https://w3id.org/conn#> .
 
 [] a js:JsChannel;
-  :reader _:jr;
-  :writer _:jw.
+  :reader <jr>;
+  :writer <jw>.
 
-_:jr a :JsReaderChannel.
-_:jw a :JsWriterChannel.
+<jr> a :JsReaderChannel.
+<jw> a :JsWriterChannel.
 
-_:wsReader a :WsReaderChannel;
+[] a :WsChannel;
+  :reader :WsReaderChannel;
+  :writer :WsWriterChannel.
+
+<wsReader> a :WsReaderChannel;
   :wsPort "3000".
 
-_:wsWriter a :WsWriterChannel;
+<wsWriter> a :WsWriterChannel;
   :wsUri "ws://localhost:3000".
 
 [] a js:Send;
   js:msg "Hallo world";
-  js:sendWriter _:wsWriter.
+  js:sendWriter <wsWriter>.
 
 [] a js:Resc;
-  js:rescReader _:wsReader.
+  js:rescReader <wsReader>.
 

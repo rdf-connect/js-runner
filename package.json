@@ -14,13 +14,12 @@
   "dependencies": {
     "@comunica/query-sparql": "^2.5.2",
     "@rdfjs/types": "^1.1.0",
-    "@treecg/connector-all": "^1.0.6",
+    "@treecg/connector-all": "^1.0.7",
+    "@treecg/types": "^0.4.0",
     "@types/command-line-args": "^5.2.0",
     "@types/command-line-usage": "^5.0.2",
-    "@types/paralleljs": "^0.0.21",
     "command-line-args": "^5.2.1",
     "command-line-usage": "^6.1.3",
-    "paralleljs": "^1.1.0"
   },
   "devDependencies": {
     "@types/node": "^18.11.15",

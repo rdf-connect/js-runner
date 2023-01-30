@@ -9,7 +9,6 @@ function streamToString(ev) {
 }
 
 async function send(msg, writer) {
-  console.dir(writer);
   const host = 'localhost';
   const port = 8000;
   const requestListener = function(req, res) {

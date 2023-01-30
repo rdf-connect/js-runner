@@ -10,7 +10,7 @@ const optionDefinitions = [
 const sections = [
   {
     header: "Js-runner",
-    content: "JS-runner is part of the {italic connector architecture}. Starting from an input file start up all JsProcessors that are defined."
+    content: "JS-runner is part of the {italic connector architecture}. Starting from an input file start up all JsProcessors that are defined. Please do not use blank nodes, skolemize your data somewhere else!"
   },
   {
     header: "Synopsis",
