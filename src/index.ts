@@ -1,4 +1,4 @@
-import { Store, StreamParser } from "n3";
+import { Store, StreamParser, DataFactory } from "n3";
 import { createReadStream } from "fs";
 import { getArgs } from "./args";
 import { executeQuery, procQuery, ProcOutput, procOutputFields, channelOutputFields, readerQuery, ReaderOutput, writerQuery, WriterOutput } from "./query";
@@ -6,26 +6,51 @@ import { merge } from "./util";
 import { createReader, createWriter } from "./channels";
 import { Writer, Stream } from "@treecg/connector-types";
 
-import * as path from 'path';
+import http from "http";
+import https from "https";
+import stream from "stream";
+import path from "path";
+import { createUriAndTermNamespace } from "@treecg/types";
+
+const OWL = createUriAndTermNamespace("http://www.w3.org/2002/07/owl#", "imports");
+const { namedNode } = DataFactory;
 
 export type Stores = [Store, ...Store[]];
 
-async function tryImportFile(file: string, dir?: string): Promise<Store[]> {
-  try {
-    return [await importFile(file, dir)];
-  } catch (ex: any) {
-    return [];
+async function get_readstream(location: string): Promise<stream.Readable> {
+  if (location.startsWith("https")) {
+    return new Promise((res) => {
+      https.get(location, res);
+    });
+  } else if (location.startsWith("http")) {
+    return new Promise((res) => {
+      http.get(location, res);
+    });
+  } else {
+    return createReadStream(location);
   }
 }
 
-async function importFile(file: string, dir?: string): Promise<Store> {
-  const store = new Store();
-  const parser = new StreamParser({ baseIRI: dir });
-  const rdfStream = createReadStream(file);
+
+const loaded = new Set();
+async function load_store(location: string, store: Store, recursive = true) {
+  if (loaded.has(location)) { return; }
+  loaded.add(location);
+
+  console.log("Loading", location);
+
+  const parser = new StreamParser({ baseIRI: location });
+  const rdfStream = await get_readstream(location);
   rdfStream.pipe(parser);
 
   await new Promise(res => store.import(parser).on('end', res));
-  return store;
+
+  if (recursive) {
+    const other_imports = store.getObjects(namedNode(location), OWL.terms.imports, null)
+    for (let other of other_imports) {
+      await load_store(other.value, store, true);
+    }
+  }
 }
 
 type ChannelParts = { [label: string]: any };
@@ -120,14 +145,9 @@ async function main() {
   const args = getArgs();
   const cwd = process.cwd();
 
-  // Loading ontologies
-  const ontologies = (await Promise.all(args.ontologies.map(onto => {
-    const location = path.join(cwd, onto);
-    return tryImportFile(onto, location);
-  }))).flatMap(x => x);
-
-  const store = await importFile(args.input);
-  const stores = <[Store, ...Store[]]>[store, ...ontologies];
+  const store = new Store();
+  await load_store(path.join(cwd, args.input), store);
+  const stores = <[Store, ...Store[]]>[store];
 
   const [readers, writers] = await handleChannels(stores);
 
@@ -146,8 +166,7 @@ async function main() {
     const args: Args = { fields: <ProcField[]>fields, procOut: procConfig };
     execs.push(executeProc(args).then(() => {
       console.log(`Finished ${procConfig.file}:${procConfig.func}`);
-
-    }))
+    }));
   }
 
   await Promise.all(execs);

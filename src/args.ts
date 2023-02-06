@@ -3,7 +3,6 @@ import commandLineUsage from "command-line-usage";
 
 const optionDefinitions = [
   { name: 'input', type: String, defaultOption: true, summary: "Specify what input file to start up" },
-  { name: 'ontologies', alias: 'o', type: String, multiple: true, description: "Specify what ontology to use", typeLabel: "{underline file}" },
   { name: 'help', alias: 'h', type: Boolean, description: "Display this help message" },
 ];
 
@@ -14,29 +13,23 @@ const sections = [
   },
   {
     header: "Synopsis",
-    content: "$ js-runner <options> <input>"
+    content: "$ js-runner <input>"
   },
   {
     header: "Command List",
     content: [{ name: "input", summary: "Specify what input file to start up" }],
   },
   {
-    optionList: [optionDefinitions[1], optionDefinitions[2]]
+    optionList: [optionDefinitions[1]]
   }
 ];
 
 export type Args = {
-  ontologies: string[],
   input: string,
 };
 
 function validArgs(args: any): boolean {
   if (!args.input) return false;
-  if (!args.ontologies
-    || !Array.isArray(args.ontologies)
-    || !args.ontologies.every((x: any) => typeof x === 'string')
-  ) return false;
-
   return true;
 }
 

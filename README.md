@@ -33,10 +33,8 @@ Note: currently websockets are configured, but changing the configuration to use
 You can execute this pipeline with
 ```bash
 $ tsc
-$ node lib/index.js input.ttl -o processor/configs/*.ttl
+$ node lib/index.js input.ttl 
 ```
 
-
-
-
+This example input configuration file uses `owl:imports` to specify additional configuration files. 
 
