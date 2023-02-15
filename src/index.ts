@@ -1,10 +1,11 @@
 import { Store, StreamParser, DataFactory } from "n3";
 import { createReadStream } from "fs";
-import { getArgs } from "./args";
-import { executeQuery, procQuery, ProcOutput, procOutputFields, channelOutputFields, readerQuery, ReaderOutput, writerQuery, WriterOutput } from "./query";
-import { merge } from "./util";
-import { createReader, createWriter } from "./channels";
+import { getArgs } from "./args.js";
+import { executeQuery, procQuery, ProcOutput, procOutputFields, channelOutputFields, readerQuery, ReaderOutput, writerQuery, WriterOutput } from "./query.js";
+import { merge } from "./util.js";
+import { createReader, createWriter } from "./channels.js";
 import { Writer, Stream } from "@treecg/connector-types";
+
 
 import http from "http";
 import https from "https";
@@ -81,7 +82,6 @@ async function handleProcs(store: Stores, readers: ChannelParts, writers: Channe
     }
   });
 
-
   return grouped;
 }
 
@@ -122,13 +122,12 @@ interface Args {
   fields: ProcField[],
   procOut: ProcOut,
 }
-function executeProc(args: Args): PromiseLike<any> {
+async function executeProc(args: Args): Promise<PromiseLike<any>> {
   const fields = args.fields;
   const proc = args.procOut;
 
   process.chdir(proc.location);
-  const root = path.join(process.cwd(), proc.file);
-  const jsProgram = require(root);
+  const jsProgram = await import(proc.file);
 
   const functionArgs = new Array(fields.length);
 
@@ -138,7 +137,7 @@ function executeProc(args: Args): PromiseLike<any> {
     }
   }
 
-  return jsProgram[proc.func](...functionArgs);
+  await jsProgram[proc.func](...functionArgs);
 }
 
 async function main() {

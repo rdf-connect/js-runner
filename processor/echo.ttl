@@ -6,9 +6,9 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 js:Echo a js:JsProcess;
-  js:file "./echo.js";
+  js:file <./echo.js>;
   js:function "echo";
-  js:location <../>;
+  js:location <./>;
   js:mapping [
     a fno:Mapping;
     fno:parameterMapping [

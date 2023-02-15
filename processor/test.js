@@ -1,4 +1,4 @@
-const http = require("http");
+import http from "http";
 
 function streamToString(ev) {
   const datas = [];
@@ -8,7 +8,7 @@ function streamToString(ev) {
   });
 }
 
-async function send(msg, writer) {
+export async function send(msg, writer) {
   const host = 'localhost';
   const port = 8000;
   const requestListener = function(req, res) {
@@ -22,12 +22,10 @@ async function send(msg, writer) {
   });
 }
 
-async function resc(reader) {
+export async function resc(reader) {
   if (reader.lastElement) {
     console.log("data", reader.lastElement);
   }
   reader.data(x => console.log("data", x));
 }
 
-exports.send = send;
-exports.resc = resc;

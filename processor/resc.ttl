@@ -6,9 +6,9 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 js:Resc a js:JsProcess;
-  js:file "./test.js";
+  js:file <./test.js>;
   js:function "resc";
-  js:location <../>;
+  js:location <./>;
   js:mapping [
     a fno:Mapping;
     fno:parameterMapping [

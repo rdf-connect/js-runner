@@ -1,6 +1,7 @@
 {
   "name": "js-runner",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -14,7 +15,7 @@
   "dependencies": {
     "@comunica/query-sparql": "^2.5.2",
     "@rdfjs/types": "^1.1.0",
-    "@treecg/connector-all": "^1.0.7",
+    "@treecg/connector-all": "^1.0.8",
     "@treecg/types": "^0.4.0",
     "@types/command-line-args": "^5.2.0",
     "@types/command-line-usage": "^5.0.2",

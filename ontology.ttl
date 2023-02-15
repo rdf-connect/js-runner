@@ -4,83 +4,35 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix : <https://w3id.org/conn#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 
-js:Echo a js:JsProcess;
-  js:file "./echo.js";
-  js:function "echo";
-  js:location <>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:input ;
-      fnom:implementationParameterPosition "0"^^xsd:int
-    ], [
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:output ;
-      fnom:implementationParameterPosition "1"^^xsd:int
-    ]
-  ].
+:JsReaderChannel rdfs:subClassOf :ReaderChannel.
+:JsWriterChannel rdfs:subClassOf :WriterChannel.
 
-[] a sh:NodeShape;
-  sh:targetClass js:Echo;
+:JsChannel a :Channel;
+    :reader :JsReaderChannel;
+    :writer :JsWriterChannel.
+
+js:JsProcess a :ProcessClass;
+  :supportsChannel :WsChannel, :JsChannel, :FileChannel, :KafkaChannel, :HttpChannel.
+
+js:JsProcessorShape a sh:NodeShape;      # Shacl shape for validation
+  sh:targetClass js:JsProcess;
   sh:property [
-    sh:class :ReaderChannel;
-    sh:path js:input;
-    sh:name "Input Channel"
+    sh:dataType xsd:string;
+    sh:path js:file;
+    sh:name "Path to main main entry point"
   ], [
-    sh:class :WriterChannel;
-    sh:path js:output;
-    sh:name "Output Channel"
-  ].
-
-
-js:Send a js:JsProcess;
-  js:file "./test.js";
-  js:function "send";
-  js:location <>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:msg ;
-      fnom:implementationParameterPosition "0"^^xsd:int
-    ], [
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:sendWriter ;
-      fnom:implementationParameterPosition "1"^^xsd:int
-    ]
-  ].
-
-[] a sh:NodeShape;
-  sh:targetClass js:Send;
-  sh:property [
-    sh:datatype xsd:string;
-    sh:path js:msg;
-    sh:name "Message to send"
+    sh:dataType xsd:iri; #  Not correct
+    sh:path js:location;
+    sh:name "Location to root of JS program"
   ], [
-    sh:class :WriterChannel;
-    sh:path js:sendWriter;
-    sh:name "Output Channel"
+    sh:dataType xsd:string;
+    sh:path js:function;
+    sh:name "Name of the JS function to execute"
+  ], [
+    sh:class fno:Mapping;
+    sh:path js:mapping;
+    sh:name "Mapping for the function arguments"
   ].
 
-js:Resc a js:JsProcess;
-  js:file "./test.js";
-  js:function "resc";
-  js:location <>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:rescReader ;
-      fnom:implementationParameterPosition "0"^^xsd:int
-    ]
-  ].
-
-[] a sh:NodeShape;
-  sh:targetClass js:Resc;
-  sh:property [
-    sh:class :ReaderChannel;
-    sh:path js:rescReader;
-    sh:name "Channel to read from"
-  ].
