@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "bin": {
+    "docker": "./bin/docker.js",
+    "js-runner": "./bin/js-runner.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node lib/index.js",
@@ -20,7 +24,8 @@
     "@types/command-line-args": "^5.2.0",
     "@types/command-line-usage": "^5.0.2",
     "command-line-args": "^5.2.1",
-    "command-line-usage": "^6.1.3"
+    "command-line-usage": "^6.1.3",
+    "stream-to-array": "^2.3.0"
   },
   "devDependencies": {
     "@types/node": "^18.11.15",

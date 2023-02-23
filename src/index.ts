@@ -1,58 +1,16 @@
-import { Store, StreamParser, DataFactory } from "n3";
-import { createReadStream } from "fs";
+import { Store } from "n3";
 import { getArgs } from "./args.js";
 import { executeQuery, procQuery, ProcOutput, procOutputFields, channelOutputFields, readerQuery, ReaderOutput, writerQuery, WriterOutput } from "./query.js";
-import { merge } from "./util.js";
+import { load_store, merge } from "./util.js";
 import { createReader, createWriter } from "./channels.js";
 import { Writer, Stream } from "@treecg/connector-types";
+export * from "./docker.js";
 
-
-import http from "http";
-import https from "https";
-import stream from "stream";
 import path from "path";
-import { createUriAndTermNamespace } from "@treecg/types";
 
-const OWL = createUriAndTermNamespace("http://www.w3.org/2002/07/owl#", "imports");
-const { namedNode } = DataFactory;
 
 export type Stores = [Store, ...Store[]];
 
-async function get_readstream(location: string): Promise<stream.Readable> {
-  if (location.startsWith("https")) {
-    return new Promise((res) => {
-      https.get(location, res);
-    });
-  } else if (location.startsWith("http")) {
-    return new Promise((res) => {
-      http.get(location, res);
-    });
-  } else {
-    return createReadStream(location);
-  }
-}
-
-
-const loaded = new Set();
-async function load_store(location: string, store: Store, recursive = true) {
-  if (loaded.has(location)) { return; }
-  loaded.add(location);
-
-  console.log("Loading", location);
-
-  const parser = new StreamParser({ baseIRI: location });
-  const rdfStream = await get_readstream(location);
-  rdfStream.pipe(parser);
-
-  await new Promise(res => store.import(parser).on('end', res));
-
-  if (recursive) {
-    const other_imports = store.getObjects(namedNode(location), OWL.terms.imports, null)
-    for (let other of other_imports) {
-      await load_store(other.value, store, true);
-    }
-  }
-}
 
 type ChannelParts = { [label: string]: any };
 
@@ -125,8 +83,10 @@ interface Args {
 async function executeProc(args: Args): Promise<PromiseLike<any>> {
   const fields = args.fields;
   const proc = args.procOut;
+  console.log("chdir", proc.location);
 
   process.chdir(proc.location);
+  console.log("at", process.cwd());
   const jsProgram = await import(proc.file);
 
   const functionArgs = new Array(fields.length);
@@ -140,12 +100,19 @@ async function executeProc(args: Args): Promise<PromiseLike<any>> {
   await jsProgram[proc.func](...functionArgs);
 }
 
-async function main() {
+function safeJoin(a: string, b: string) {
+  if(b.startsWith("/")) {
+    return b;
+  }
+  return path.join(a, b);
+}
+
+export async function jsRunner() {
   const args = getArgs();
   const cwd = process.cwd();
 
   const store = new Store();
-  await load_store(path.join(cwd, args.input), store);
+  await load_store(safeJoin(cwd, args.input), store);
   const stores = <[Store, ...Store[]]>[store];
 
   const [readers, writers] = await handleChannels(stores);
@@ -163,13 +130,13 @@ async function main() {
     const fields = Object.values(proc);
 
     const args: Args = { fields: <ProcField[]>fields, procOut: procConfig };
-    execs.push(executeProc(args).then(() => {
+    await executeProc(args);
+    // execs.push(executeProc(args).then(() => {
       console.log(`Finished ${procConfig.file}:${procConfig.func}`);
-    }));
+    // }));
   }
 
-  await Promise.all(execs);
+  // await Promise.all(execs);
 }
 
-main();
 
