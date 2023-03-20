@@ -118,6 +118,7 @@ export async function jsRunner() {
   const [readers, writers] = await handleChannels(stores);
 
   const procs = await handleProcs(stores, readers, writers);
+  console.log(`Found ${Object.values(procs).length} processors ${Object.values(procs).map(x => x.file+":"+x.func).join(", ")} `);
 
   const execs = [];
   for (let proc of Object.values(procs)) {

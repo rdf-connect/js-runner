@@ -5,6 +5,12 @@
 @prefix : <https://w3id.org/conn#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
+<> :install [
+  a :GitInstall ;
+  :url <https://github.com/ajuvercr/js-runner.git>;
+  :build "npm install";
+].
+
 js:Send a js:JsProcess;
   js:file <./test.js>;
   js:function "send";
