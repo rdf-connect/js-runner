@@ -13,6 +13,8 @@ COPY tsconfig.json ./
 RUN npm install
 
 COPY src/ ./src
+COPY bin/ ./bin
+COPY processor/ ./processor
 
 RUN npm run build
 
@@ -22,5 +24,5 @@ COPY $file ./run.ttl
 
 RUN node bin/docker.js ./run.ttl
 
-CMD ["node","bin/js-runner.js","/tmp/run.ttl"]
+ENTRYPOINT ["node","bin/js-runner.js","/tmp/run.ttl"]
 

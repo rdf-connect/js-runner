@@ -6,9 +6,8 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 <> :install [
-  a :GitInstall ;
-  :url <https://github.com/ajuvercr/js-runner.git>;
-  :build "npm install";
+  a :LocalInstall ;
+  :path <./>;
 ].
 
 js:Resc a js:JsProcess;

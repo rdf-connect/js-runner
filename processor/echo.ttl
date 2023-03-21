@@ -9,6 +9,7 @@
   a :GitInstall ;
   :url <https://github.com/ajuvercr/js-runner.git>;
   :build "npm install";
+  :path "processor";
 ].
 
 js:Echo a js:JsProcess;

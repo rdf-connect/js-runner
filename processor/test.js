@@ -9,10 +9,10 @@ function streamToString(ev) {
 }
 
 export async function send(msg, writer) {
-  const host = 'localhost';
+  const host = '0.0.0.0';
   const port = 8000;
   const requestListener = function(req, res) {
-    streamToString(req).then(st => writer.push(JSON.parse(st.toString())));
+    streamToString(req).then(st => writer.push(st.toString()));
     res.writeHead(200);
     res.end(msg);
   };
@@ -20,6 +20,8 @@ export async function send(msg, writer) {
   server.listen(port, host, () => {
     console.log(`Server is running on http://${host}:${port} prefix ${msg}`);
   });
+
+  writer.push("Hallo!");
 }
 
 export async function resc(reader) {

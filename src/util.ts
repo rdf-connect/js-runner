@@ -17,7 +17,7 @@ export function toArray<T>(stream: stream.Readable): Promise<T[]> {
 } 
 
 export const OWL = createUriAndTermNamespace("http://www.w3.org/2002/07/owl#", "imports");
-export const CONN2 = createUriAndTermNamespace("https://w3id.org/conn#", "install", "build", "GitInstall", "url", "procFile");
+export const CONN2 = createUriAndTermNamespace("https://w3id.org/conn#", "install", "build", "GitInstall", "LocalInstall", "url", "procFile", "path");
 const { namedNode } = DataFactory;
 
 export type Keyed<T> = { [Key in keyof T]: (RDF.Term | undefined) };
