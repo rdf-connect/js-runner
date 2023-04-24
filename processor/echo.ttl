@@ -13,7 +13,7 @@
 ].
 
 js:Echo a js:JsProcess;
-  js:file <./echo.js>;
+  js:file <./test.js>;
   js:function "echo";
   js:location <./>;
   js:mapping [
