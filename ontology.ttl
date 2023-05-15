@@ -5,18 +5,23 @@
 @prefix : <https://w3id.org/conn#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix dc: <http://purl.org/dc/terms/>.
 
 :JsReaderChannel rdfs:subClassOf :ReaderChannel.
 :JsWriterChannel rdfs:subClassOf :WriterChannel.
 
 :JsChannel a :Channel;
+  dc:title "Javascript in memory channel";
+  dc:description "Channel only used by the JsRunner, enabling fast in memory communication.";
     :reader :JsReaderChannel;
     :writer :JsWriterChannel.
 
 js:JsProcess a :ProcessClass;
+  dc:title "Javascript Runner";
+  dc:description "The JSRunner is one of the most feature rich runners of the connector architecture. It enables lifting javascript functions to connector architecture components. It allows for fast in memory communication between these processors with the js:JsChannel. More information can be found at https://the-connector-architecture.github.io/site/.";
   :supportsChannel :WsChannel, :JsChannel, :FileChannel, :KafkaChannel, :HttpChannel.
 
-js:JsProcessorShape a sh:NodeShape;      # Shacl shape for validation
+js:JsProcessorShape a sh:NodeShape; 
   sh:targetClass js:JsProcess;
   sh:property [
     sh:dataType xsd:string;
