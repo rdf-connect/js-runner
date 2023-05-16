@@ -87,7 +87,7 @@ async function executeProc(args: Args): Promise<PromiseLike<any>> {
 
   process.chdir(proc.location);
   console.log("at", process.cwd());
-  const jsProgram = await import(proc.file);
+  const jsProgram = await import("file://" + proc.file);
 
   const functionArgs = new Array(fields.length);
 
@@ -101,7 +101,7 @@ async function executeProc(args: Args): Promise<PromiseLike<any>> {
 }
 
 function safeJoin(a: string, b: string) {
-  if(b.startsWith("/")) {
+  if (b.startsWith("/")) {
     return b;
   }
   return path.join(a, b);
@@ -112,13 +112,13 @@ export async function jsRunner() {
   const cwd = process.cwd();
 
   const store = new Store();
-  await load_store(safeJoin(cwd, args.input), store);
+  await load_store(safeJoin(cwd, args.input).replaceAll("\\", "/"), store);
   const stores = <[Store, ...Store[]]>[store];
 
   const [readers, writers] = await handleChannels(stores);
 
   const procs = await handleProcs(stores, readers, writers);
-  console.log(`Found ${Object.values(procs).length} processors ${Object.values(procs).map(x => x.file+":"+x.func).join(", ")} `);
+  console.log(`Found ${Object.values(procs).length} processors ${Object.values(procs).map(x => x.file + ":" + x.func).join(", ")} `);
 
   const execs = [];
   for (let proc of Object.values(procs)) {
@@ -133,7 +133,7 @@ export async function jsRunner() {
     const args: Args = { fields: <ProcField[]>fields, procOut: procConfig };
     await executeProc(args);
     // execs.push(executeProc(args).then(() => {
-      console.log(`Finished ${procConfig.file}:${procConfig.func}`);
+    console.log(`Finished ${procConfig.file}:${procConfig.func}`);
     // }));
   }
 
