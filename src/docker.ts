@@ -1,7 +1,7 @@
 import { Store, Writer } from "n3";
 import path from "path";
-import { getArgs } from "./args.js";
-import { load_store, CONN2, load_quads } from "./util.js";
+import { getArgs } from "./args";
+import { load_store, CONN2, load_quads } from "./util";
 import * as RDF from "rdf-js";
 import { RDF as RDFT } from "@treecg/types";
 import { randomUUID } from "crypto";

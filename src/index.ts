@@ -1,10 +1,12 @@
 import { Store } from "n3";
-import { getArgs } from "./args.js";
-import { executeQuery, procQuery, ProcOutput, procOutputFields, channelOutputFields, readerQuery, ReaderOutput, writerQuery, WriterOutput } from "./query.js";
-import { load_store, merge } from "./util.js";
-import { createReader, createWriter } from "./channels.js";
+import { getArgs } from "./args";
+import { executeQuery, procQuery, ProcOutput, procOutputFields, channelOutputFields, readerQuery, ReaderOutput, writerQuery, WriterOutput } from "./query";
+import { load_store, merge } from "./util";
+import { createReader, createWriter } from "./channels";
 import { Writer, Stream } from "@treecg/connector-types";
-export * from "./docker.js";
+
+export * from "./docker";
+export * from "./models";
 
 import path from "path";
 
