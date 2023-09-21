@@ -5,6 +5,9 @@ import { load_store, merge } from "./util";
 import { createReader, createWriter } from "./channels";
 import { Writer, Stream } from "@treecg/connector-types";
 
+export * as connectors from "./connectors";
+export * from "./connectors/index";
+
 export * from "./docker";
 // export * from "./models";
 export * from "./shacl";

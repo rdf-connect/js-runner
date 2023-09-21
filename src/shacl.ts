@@ -62,7 +62,6 @@ export interface Shape {
 export function toLens(
   shape: Shape,
 ): BasicLens<Cont, { [label: string]: any }> {
-  console.log(shape.id, shape.ty.value);
   if (shape.fields.length === 0) return empty<Cont>().map(() => ({}));
 
   const fields = shape.fields.map((field) => {

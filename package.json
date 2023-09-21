@@ -26,10 +26,14 @@
     "@types/command-line-args": "^5.2.0",
     "@types/command-line-usage": "^5.0.2",
     "@types/n3": "^1.16.0",
+    "@types/ws": "^8.5.5",
     "command-line-args": "^5.2.1",
     "command-line-usage": "^6.1.3",
+    "kafkajs": "^2.2.4",
     "rdf-lens": "^0.0.4",
-    "stream-to-array": "^2.3.0"
+    "stream-to-array": "^2.3.0",
+    "watcher": "^2.3.0",
+    "ws": "^8.14.2"
   },
   "devDependencies": {
     "@babel/core": "^7.22.20",
