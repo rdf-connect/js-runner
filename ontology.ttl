@@ -1,43 +1,142 @@
-@prefix js: <https://w3id.org/conn/js#> .
-@prefix fno: <https://w3id.org/function/ontology#> .
-@prefix fnom: <https://w3id.org/function/vocabulary/mapping#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix : <https://w3id.org/conn#> .
-@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix js: <https://w3id.org/conn/js#>.
+@prefix fno: <https://w3id.org/function/ontology#>.
+@prefix fnom: <https://w3id.org/function/vocabulary/mapping#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix : <https://w3id.org/conn#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 @prefix dc: <http://purl.org/dc/terms/>.
 
+[ ] a sh:NodeShape;
+  sh:targetClass :Channel;
+  sh:property [
+    sh:path ( );
+    sh:name "id";
+    sh:maxCount 1;
+    sh:datatype xsd:iri;
+  ], [
+    sh:path :reader;
+    sh:name "reader";
+    sh:maxCount 1;
+    sh:datatype xsd:iri;
+  ], [
+    sh:path :writer;
+    sh:name "writer";
+    sh:maxCount 1;
+    sh:datatype xsd:iri;
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :ReaderChannel;
+  sh:property [
+    sh:path [ sh:inversePath :reader ];
+    sh:name "channel";
+    sh:maxCount 1;
+    sh:class :Channel;
+  ], [
+    sh:path rdf:type;
+    sh:name "ty";
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :WriterChannel;
+  sh:property [
+    sh:path [ sh:inversePath :writer ];
+    sh:name "channel";
+    sh:maxCount 1;
+    sh:class :Channel;
+  ], [
+    sh:path rdf:type;
+    sh:name "ty";
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :JsReaderChannel,
+    js:JsReaderChannel,
+    js:JsWriterChannel,
+    :JsWriterChannel,
+    js:JsChannel.
+
+js:JsChannel rdfs:subClassOf :Channel.
 :JsReaderChannel rdfs:subClassOf :ReaderChannel.
 :JsWriterChannel rdfs:subClassOf :WriterChannel.
-
-:JsChannel a :Channel;
+js:JsReaderChannel rdfs:subClassOf :ReaderChannel.
+js:JsWriterChannel rdfs:subClassOf :WriterChannel.
+#
+js:JsChannel a :Channel;
   dc:title "Javascript in memory channel";
   dc:description "Channel only used by the JsRunner, enabling fast in memory communication.";
-    :reader :JsReaderChannel;
-    :writer :JsWriterChannel.
+  :reader :JsReaderChannel;
+  :writer :JsWriterChannel.
 
 js:JsProcess a :ProcessClass;
   dc:title "Javascript Runner";
   dc:description "The JSRunner is one of the most feature rich runners of the connector architecture. It enables lifting javascript functions to connector architecture components. It allows for fast in memory communication between these processors with the js:JsChannel. More information can be found at https://the-connector-architecture.github.io/site/.";
-  :supportsChannel :WsChannel, :JsChannel, :FileChannel, :KafkaChannel, :HttpChannel.
+  :supportsChannel :WsChannel,
+    :JsChannel,
+    :FileChannel,
+    :KafkaChannel,
+    :HttpChannel.
 
-js:JsProcessorShape a sh:NodeShape; 
+[ ] a sh:NodeShape;
+  sh:targetClass fno:Mapping;
+  sh:property [
+    sh:class fnom:PositionParameterMapping;
+    sh:path fno:parameterMapping;
+    sh:name "parameters";
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass fnom:PositionParameterMapping;
+  sh:property [
+    sh:datatype xsd:string;
+    sh:path fnom:functionParameter;
+    sh:name "parameter";
+    sh:maxCount 1;
+  ], [
+    sh:datatype xsd:integer;
+    sh:path fnom:implementationParameterPosition;
+    sh:name "position";
+    sh:maxCount 1;
+  ].
+
+js:JsProcessorShape a sh:NodeShape;
   sh:targetClass js:JsProcess;
   sh:property [
-    sh:dataType xsd:string;
+    sh:datatype xsd:iri;
+    sh:path ( );
+    sh:name "ty";
+    sh:maxCount 1;
+    sh:minCount 1;
+  ], [
+    sh:datatype xsd:string;
     sh:path js:file;
-    sh:name "Path to main main entry point"
+    sh:name "file";
+    sh:maxCount 1;
+    sh:minCount 1;
   ], [
-    sh:dataType xsd:iri; #  Not correct
+    sh:datatype xsd:string;
+    #  Not correct
     sh:path js:location;
-    sh:name "Location to root of JS program"
+    sh:name "location";
+    sh:maxCount 1;
+    sh:minCount 1;
   ], [
-    sh:dataType xsd:string;
+    sh:datatype xsd:string;
     sh:path js:function;
-    sh:name "Name of the JS function to execute"
+    sh:name "func";
+    sh:maxCount 1;
+    sh:minCount 1;
   ], [
     sh:class fno:Mapping;
     sh:path js:mapping;
-    sh:name "Mapping for the function arguments"
+    sh:name "mapping";
+    sh:maxCount 1;
+    sh:minCount 1;
   ].
 

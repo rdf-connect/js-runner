@@ -1,32 +1,36 @@
-@prefix js: <https://w3id.org/conn/js#> .
-@prefix ws: <https://w3id.org/conn/ws#> .
-@prefix : <https://w3id.org/conn#> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix js: <https://w3id.org/conn/js#>.
+@prefix ws: <https://w3id.org/conn/ws#>.
+@prefix : <https://w3id.org/conn#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
 
 <> owl:imports <https://raw.githubusercontent.com/TREEcg/connector-architecture/main/channel/ws.ttl>.
-<> owl:imports <./processor/echo.ttl>, <./processor/send.ttl>, <./processor/resc.ttl>.
+<> owl:imports <./processor/echo.ttl>,
+  <./processor/send.ttl>,
+  <./processor/resc.ttl>.
 
-[] a js:JsChannel;
+[ ] a js:JsChannel;
   :reader <jr>;
   :writer <jw>.
 
+:WsReaderChannel rdfs:subClassOf :ReaderChannel.
+:WsWriterChannel rdfs:subClassOf :WriterChannel.
+[ ] a sh:NodeShape;
+  sh:targetClass :WsWriterChannel;
+  sh:property [
+    sh:path :wsUri;
+    sh:datatype xsd:string;
+    sh:name "uri";
+  ].
+
 <jr> a :JsReaderChannel.
 <jw> a :JsWriterChannel.
-
-[] a :WsChannel;
-  :reader :WsReaderChannel;
-  :writer :WsWriterChannel.
-
-<wsReader> a :WsReaderChannel;
-  :wsPort "3000".
-
-<wsWriter> a :WsWriterChannel;
-  :wsUri "ws://localhost:3000".
-
-[] a js:Send;
+[ ] a js:Send;
   js:msg "Hallo world";
   js:sendWriter <jw>.
 
-[] a js:Resc;
+[ ] a js:Resc;
   js:rescReader <jr>.
 

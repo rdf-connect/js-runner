@@ -6,7 +6,8 @@ import { createReader, createWriter } from "./channels";
 import { Writer, Stream } from "@treecg/connector-types";
 
 export * from "./docker";
-export * from "./models";
+// export * from "./models";
+export * from "./shacl";
 
 import path from "path";
 

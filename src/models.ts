@@ -1,14 +1,6 @@
 import { Quad, Term } from "@rdfjs/types";
 import { createTermNamespace, SHACL } from "@treecg/types";
-import {
-  BasicLens,
-  BasicLensM,
-  Cont,
-  empty,
-  invPred,
-  pred,
-  shacl,
-} from "rdf-lens";
+import { BasicLens, BasicLensM, Cont, empty, invPred, pred } from "rdf-lens";
 
 const JS = createTermNamespace(
   "https://w3id.org/conn/js#",
@@ -40,45 +32,48 @@ export type Processor = {
   location: string;
 
   mappings: Mapping[];
-  shape: BasicLens<Quad[], shacl.Obj>;
+  shape: BasicLens<Quad[], any>;
 };
 
 function fieldLens<T extends string>(
   predicate: Term,
   field: T,
 ): BasicLens<Cont, Record<T, string>> {
-  return pred(predicate).one().map((x) => {
-    const out = <{ [label: string]: string }>{};
-    out[field] = x.id.value;
-    return <Record<T, string>>out;
-  });
+  return pred(predicate)
+    .one()
+    .map((x) => {
+      const out = <{ [label: string]: string }>{};
+      out[field] = x.id.value;
+      return <Record<T, string>>out;
+    });
 }
 
 const MappingLens: BasicLens<Cont, Mapping> = fieldLens(
   FNOM.functionParameter,
   "predicate",
-).and(
-  fieldLens(FNOM.implementationParameterPosition, "location"),
-).map(([{ predicate }, { location }]) => ({ predicate, location: +location }));
-
-const MappingsLens: BasicLensM<Cont, Mapping> = pred(JS.mapping).thenFlat(
-  pred(FNO.parameterMapping),
 )
+  .and(fieldLens(FNOM.implementationParameterPosition, "location"))
+  .map(([{ predicate }, { location }]) => ({ predicate, location: +location }));
+
+const MappingsLens: BasicLensM<Cont, Mapping> = pred(JS.mapping)
+  .thenFlat(pred(FNO.parameterMapping))
   .thenSome(MappingLens);
 
-const ShapeLens = invPred(SHACL.terms.targetClass).one().then(shacl.ShaclShape)
+const ShapeLens = invPred(SHACL.terms.targetClass)
+  .one()
   .map((shape) => ({
     shape,
   }));
 
-export const ProcessorLens: BasicLens<Cont, Processor> = empty<Cont>().map((
-  x,
-) => ({
-  id: x.id.value,
-})).and(
-  fieldLens(JS.file, "file"),
-  fieldLens(JS.function, "function"),
-  fieldLens(JS.location, "location"),
-  MappingsLens.map((mappings) => ({ mappings })),
-  ShapeLens,
-).map((xs) => Object.assign({}, ...xs));
+export const ProcessorLens: BasicLens<Cont, Processor> = empty<Cont>()
+  .map((x) => ({
+    id: x.id.value,
+  }))
+  .and(
+    fieldLens(JS.file, "file"),
+    fieldLens(JS.function, "function"),
+    fieldLens(JS.location, "location"),
+    MappingsLens.map((mappings) => ({ mappings })),
+    ShapeLens,
+  )
+  .map((xs) => Object.assign({}, ...xs));
