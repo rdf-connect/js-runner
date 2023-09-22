@@ -19,7 +19,7 @@ const JsProcessor = DataFactory.namedNode("https://w3id.org/conn/js#JsProcess");
 describe("Input test", () => {
   test("Parse configuration", () => {
     const output = parseConfig();
-    expect(output.shapes.length).toBe(8);
+    expect(output.shapes.length).toBe(6);
     expect(output.lenses[JsProcessor.value]).toBeDefined();
   });
 
