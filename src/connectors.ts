@@ -1,14 +1,30 @@
-import { createTermNamespace, createUriNamespace } from "@treecg/types";
+import { createTermNamespace } from "@treecg/types";
 
-import * as ws from "./ws";
-import * as http from "./http";
-import * as kafka from "./kafka";
-import * as file from "./file";
 import { NamedNode, Term } from "@rdfjs/types";
-export * as ws from "./ws";
-export * as http from "./http";
-export * as kafka from "./kafka";
-export * as file from "./file";
+import {
+  FileReaderConfig,
+  FileWriterConfig,
+  startFileStreamReader,
+  startFileStreamWriter,
+} from "./connectors/file";
+import {
+  startWsStreamReader,
+  startWsStreamWriter,
+  WsReaderConfig,
+  WsWriterConfig,
+} from "./connectors/ws";
+import {
+  KafkaReaderConfig,
+  KafkaWriterConfig,
+  startKafkaStreamReader,
+  startKafkaStreamWriter,
+} from "./connectors/kafka";
+import {
+  HttpReaderConfig,
+  HttpWriterConfig,
+  startHttpStreamReader,
+  startHttpStreamWriter,
+} from "./connectors/http";
 
 export const Conn = createTermNamespace(
   "https://w3id.org/conn#",
@@ -56,35 +72,29 @@ export class ChannelFactory {
 
   createReader(config: Config): Stream<string> {
     if (config.ty.equals(Conn.FileReaderChannel)) {
-      const { reader, init } = file.startFileStreamReader(
-        <file.FileReaderConfig>config,
-      );
+      const { reader, init } = startFileStreamReader(<FileReaderConfig>config);
       this.inits.push(init);
 
       return reader;
     }
 
     if (config.ty.equals(Conn.WsReaderChannel)) {
-      const { reader, init } = ws.startWsStreamReader(
-        <ws.WsReaderConfig>config,
-      );
+      const { reader, init } = startWsStreamReader(<WsReaderConfig>config);
       this.inits.push(init);
 
       return reader;
     }
 
     if (config.ty.equals(Conn.KafkaReaderChannel)) {
-      const { reader, init } = kafka.startKafkaStreamReader(
-        <kafka.KafkaReaderConfig>config,
+      const { reader, init } = startKafkaStreamReader(
+        <KafkaReaderConfig>config,
       );
       this.inits.push(init);
       return reader;
     }
 
     if (config.ty.equals(Conn.HttpReaderChannel)) {
-      const { reader, init } = http.startHttpStreamReader(
-        <http.HttpReaderConfig>config,
-      );
+      const { reader, init } = startHttpStreamReader(<HttpReaderConfig>config);
       this.inits.push(init);
       return reader;
     }
@@ -116,35 +126,29 @@ export class ChannelFactory {
 
   createWriter(config: Config): Writer<string> {
     if (config.ty.equals(Conn.FileWriterChannel)) {
-      const { writer, init } = file.startFileStreamWriter(
-        <file.FileWriterConfig>config,
-      );
+      const { writer, init } = startFileStreamWriter(<FileWriterConfig>config);
       this.inits.push(init);
 
       return writer;
     }
 
     if (config.ty.equals(Conn.WsWriterChannel)) {
-      const { writer, init } = ws.startWsStreamWriter(
-        <ws.WsWriterConfig>config,
-      );
+      const { writer, init } = startWsStreamWriter(<WsWriterConfig>config);
       this.inits.push(init);
 
       return writer;
     }
 
     if (config.ty.equals(Conn.KafkaWriterChannel)) {
-      const { writer, init } = kafka.startKafkaStreamWriter(
-        <kafka.KafkaWriterConfig>config,
+      const { writer, init } = startKafkaStreamWriter(
+        <KafkaWriterConfig>config,
       );
       this.inits.push(init);
       return writer;
     }
 
     if (config.ty.equals(Conn.HttpWriterChannel)) {
-      const { writer, init } = http.startHttpStreamWriter(
-        <http.HttpWriterConfig>config,
-      );
+      const { writer, init } = startHttpStreamWriter(<HttpWriterConfig>config);
       this.inits.push(init);
       return writer;
     }

@@ -2,8 +2,7 @@ import { Store } from "n3";
 import { getArgs } from "./args";
 import { load_store } from "./util";
 
-export * as connectors from "./connectors";
-export * from "./connectors/index";
+export * from "./connectors";
 export * from "./shacl";
 
 import path from "path";
@@ -105,4 +104,3 @@ export async function jsRunner() {
     }
   }
 }
-

@@ -2,10 +2,8 @@ import {
   Config,
   ReaderConstructor,
   SimpleStream,
-  Stream,
-  Writer,
   WriterConstructor,
-} from ".";
+} from "../connectors";
 import { RawData, WebSocket } from "ws";
 import { WebSocketServer } from "ws";
 

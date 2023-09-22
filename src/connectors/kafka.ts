@@ -5,10 +5,8 @@ import {
   Config,
   ReaderConstructor,
   SimpleStream,
-  Stream,
-  Writer,
   WriterConstructor,
-} from ".";
+} from "../connectors";
 
 export interface SASLOptions {
   mechanism: "plain";

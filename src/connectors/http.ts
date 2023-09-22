@@ -8,7 +8,7 @@ import type {
 } from "http";
 import { createServer } from "http";
 import type { Readable } from "stream";
-import { Config, ReaderConstructor, SimpleStream, WriterConstructor } from ".";
+import { Config, ReaderConstructor, SimpleStream, WriterConstructor } from "../connectors";
 
 function streamToString(stream: Readable): Promise<string> {
   const datas = <Buffer[]>[];

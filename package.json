@@ -1,11 +1,11 @@
 {
   "name": "@ajuvercr/js-runner",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "type": "module",
   "description": "",
   "main": "./dist/index.js",
   "files": [
-    "./dist/**/*.js",
+    "./dist/*",
     "./ontology.ttl",
     "./processor/*"
   ],

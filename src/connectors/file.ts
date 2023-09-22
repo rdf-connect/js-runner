@@ -2,7 +2,7 @@ import { createReadStream, openSync } from "fs";
 import { appendFile, readFile, stat, writeFile } from "fs/promises";
 import { isAbsolute } from "path";
 import { watch } from "node:fs";
-import { Config, ReaderConstructor, SimpleStream, WriterConstructor } from ".";
+import { Config, ReaderConstructor, SimpleStream, WriterConstructor } from "../connectors";
 
 interface FileError extends Error {
   code: string;

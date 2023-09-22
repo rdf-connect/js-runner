@@ -20,11 +20,11 @@ js:Echo a js:JsProcess;
     a fno:Mapping;
     fno:parameterMapping [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter js:input;
+      fnom:functionParameter "Input Channel";
       fnom:implementationParameterPosition "0"^^xsd:int;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter js:output;
+      fnom:functionParameter "Output Channel";
       fnom:implementationParameterPosition "1"^^xsd:int;
     ];
   ].
@@ -35,9 +35,11 @@ js:Echo a js:JsProcess;
     sh:class :ReaderChannel;
     sh:path js:input;
     sh:name "Input Channel";
+    sh:maxCount 1;
   ], [
     sh:class :WriterChannel;
     sh:path js:output;
     sh:name "Output Channel";
+    sh:maxCount 1;
   ].
 
