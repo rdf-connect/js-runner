@@ -19,7 +19,7 @@ const JsProcessor = DataFactory.namedNode("https://w3id.org/conn/js#JsProcess");
 describe("Input test", () => {
   test("Parse configuration", () => {
     const output = parseConfig();
-    expect(output.shapes.length).toBe(11);
+    expect(output.shapes.length).toBe(8);
     expect(output.lenses[JsProcessor.value]).toBeDefined();
   });
 
@@ -33,7 +33,7 @@ describe("Input test", () => {
     const quad = quads.find(
       (x) => x.predicate.equals(RDF.terms.type) && x.object.equals(JsProcessor),
     )!;
-    const object = config.lenses[quad.object.value].lens!.execute({
+    const object = config.lenses[quad.object.value].execute({
       id: quad.subject,
       quads,
     });
@@ -59,7 +59,7 @@ describe("Input test", () => {
           x.predicate.equals(RDF.terms.type) && x.object.equals(JsProcessor),
       )
       .map((x) => x.subject);
-    const processorLens = config.lenses[JsProcessor.value].lens;
+    const processorLens = config.lenses[JsProcessor.value];
     const processors = subjects.map((id) =>
       processorLens.execute({ id, quads }),
     );
@@ -76,7 +76,7 @@ describe("Input test", () => {
         proc.ty.value,
         subjects.map((x) => x.value),
       );
-      const processorLens = config.lenses[proc.ty.value].lens;
+      const processorLens = config.lenses[proc.ty.value];
 
       found.push(...subjects.map((id) => processorLens.execute({ id, quads })));
     }

@@ -48,13 +48,13 @@ export interface ShapeField {
   path: BasicLensM<Cont, Cont>;
   minCount?: number;
   maxCount?: number;
-  extract: (term: Term, quads: Quad[]) => any;
+  extract: BasicLens<Cont, any>;
+  // extract: (term: Term, quads: Quad[]) => any;
 }
 
 export interface Shape {
   id: string;
   ty: Term;
-  subTypes: Term[];
   description?: string;
   fields: ShapeField[];
 }
@@ -69,33 +69,16 @@ export function toLens(
     const maxCount = field.maxCount || Number.MAX_SAFE_INTEGER;
     const base =
       maxCount < 2 // There will be at most one
-        ? field.path.one(undefined).then(
-            new BasicLens((inp) => {
-              if (inp) {
-                return field.extract(inp.id, inp.quads);
-              } else {
-                if (minCount > 0) {
-                  throw `${shape.ty} required field ${field.name} `;
-                }
-              }
-            }),
-          )
-        : field.path
-            .thenFlat(
-              // We extract an array
-              new BasicLensM(({ id, quads }) => field.extract(id, quads)),
-            )
-            .then(
-              new BasicLens((xs) => {
-                if (xs.length < minCount) {
-                  throw `${shape.ty}:${field.name} required at least ${minCount} elements, found ${xs.length}`;
-                }
-                if (xs.length > maxCount) {
-                  throw `${shape.ty}:${field.name} required at most ${maxCount} elements, found ${xs.length}`;
-                }
-                return xs;
-              }),
-            );
+        ? field.path.one().then(field.extract)
+        : field.path.thenAll(field.extract).map((xs) => {
+            if (xs.length < minCount) {
+              throw `${shape.ty}:${field.name} required at least ${minCount} elements, found ${xs.length}`;
+            }
+            if (xs.length > maxCount) {
+              throw `${shape.ty}:${field.name} required at most ${maxCount} elements, found ${xs.length}`;
+            }
+            return xs;
+          });
 
     const asField = base.map((x) => {
       const out = <{ [label: string]: any }>{};
@@ -103,9 +86,7 @@ export function toLens(
       return out;
     });
 
-    return (field.minCount || 0) > 0
-      ? asField
-      : asField.or(empty().map(() => ({})));
+    return minCount > 0 ? asField : asField.or(empty().map(() => ({})));
   });
 
   return fields[0]
@@ -198,19 +179,6 @@ export const ShaclPath = ShaclSequencePath.or(
   ShaclPredicatePath,
 );
 
-function extractSubtypes(): BasicLens<Cont, Term[]> {
-  return empty<Cont>()
-    .map(({ id }) => [id])
-    .and(pred(RDFS.subClassOf).one(undefined))
-    .map(([subs, next]) => {
-      if (next) {
-        const rest = extractSubtypes().execute(next);
-        subs.push(...rest);
-      }
-      return subs;
-    });
-}
-
 function field<T extends string, O = string>(
   predicate: Term,
   name: T,
@@ -244,18 +212,27 @@ function optionalField<T extends string, O = string>(
       return out;
     });
 }
-function dataTypeToExtract(dataType: Term): (t: Term) => any {
-  if (dataType.equals(XSD.terms.integer)) return (t) => +t.value;
-  if (dataType.equals(XSD.terms.string)) return (t) => t.value;
-  if (dataType.equals(XSD.terms.dateTime)) return (t) => new Date(t.value);
+function dataTypeToExtract(dataType: Term, t: Term): any {
+  if (dataType.equals(XSD.terms.integer)) return +t.value;
+  if (dataType.equals(XSD.terms.string)) return t.value;
+  if (dataType.equals(XSD.terms.dateTime)) return new Date(t.value);
 
-  return (t) => t;
+  return t;
 }
 
 type Cache = {
-  [clazz: string]: { lens: BasicLens<Cont, any>; subClasses: Term[] };
+  [clazz: string]: BasicLens<Cont, any>;
 };
-function extractProperty(cache: Cache): BasicLens<Cont, ShapeField> {
+
+type SubClasses = {
+  [clazz: string]: string;
+};
+
+function extractProperty(
+  cache: Cache,
+  subClasses: SubClasses,
+  apply: { [clazz: string]: (item: any) => any },
+): BasicLens<Cont, ShapeField> {
   const pathLens = pred(SHACL.path)
     .one()
     .then(ShaclPath)
@@ -265,54 +242,83 @@ function extractProperty(cache: Cache): BasicLens<Cont, ShapeField> {
   const nameLens = field(SHACL.name, "name");
   const minCount = optionalField(SHACL.minCount, "minCount", (x) => +x);
   const maxCount = optionalField(SHACL.maxCount, "maxCount", (x) => +x);
-  const clazzLens: BasicLens<Cont, { extract: ShapeField["extract"] }> = field(
-    SHACL.class,
-    "clazz",
-  ).map(({ clazz }) => {
-    return {
-      extract: (id, quads) => {
-        // How do I extract this value: use a pre
-        let use = clazz;
 
-        const ty = quads.find(
-          (q) => q.subject.equals(id) && q.predicate.equals(RDF.terms.type),
-        )?.object;
-
-        if (ty && ty.value !== clazz) {
-          const self = cache[ty.value];
-          if (!self) throw "Could not extract class " + clazz;
-          if (!self.subClasses.some((x) => x.value === clazz)) {
-            throw `Class ${ty.value} is not a supertype of the expected type ${clazz}`;
-          }
-          use = ty.value;
-        }
-
-        const lens = cache[use];
-        const lenses = lens.subClasses.map((x) => cache[x.value]?.lens);
-        const validLenses = lenses
-          .filter((x) => !!x)
-          .map((x) => <BasicLens<Cont, any>>x);
-        if (validLenses.length < 1) throw "Could not extract class " + clazz;
-        return validLenses[0]
-          .and(...validLenses.slice(1))
-          .map((xs) => Object.assign({}, ...xs))
-          .execute({ id, quads });
-      },
-    };
-  });
   const dataTypeLens: BasicLens<Cont, { extract: ShapeField["extract"] }> =
     pred(SHACL.datatype)
       .one()
       .map(({ id }) => ({
-        extract: dataTypeToExtract(id),
+        extract: empty<Cont>().map((item) => dataTypeToExtract(id, item.id)),
       }));
+
+  const clazzLens: BasicLens<Cont, { extract: ShapeField["extract"] }> = field(
+    SHACL.class,
+    "clazz",
+  ).map(({ clazz: expected_class }) => {
+    return {
+      extract: new BasicLens<Cont, any>(({ id, quads }) => {
+        // How do I extract this value: use a pre
+        let found_class = false;
+
+        const ty = quads.find(
+          (q) => q.subject.equals(id) && q.predicate.equals(RDF.terms.type),
+        )?.object.value;
+
+        if (!ty) {
+          // We did not find a type, so use the expected class lens
+          const lens = cache[expected_class];
+          if (!lens) {
+            throw `Tried extracting class ${expected_class} but no shape was defined`;
+          }
+          return lens.execute({ id, quads });
+        }
+
+        // We found a type, let's see if the expected class is inside the class hierachry
+        const lenses: (typeof cache)[string][] = [];
+
+        let current = ty;
+        while (!!current) {
+          if (lenses.length < 2) {
+            const lens = cache[current];
+            if (lens) {
+              lenses.push(lens);
+            }
+          }
+          found_class = found_class || current === expected_class;
+          current = subClasses[current];
+        }
+
+        if (!found_class) {
+          throw `${ty} is not a subClassOf ${expected_class}`;
+        }
+
+        if (lenses.length === 0) {
+          throw `Tried the classhierarchy for ${ty}, but found no shape definition`;
+        }
+
+        const finalLens =
+          lenses.length == 1
+            ? lenses[0]
+            : lenses[0].and(lenses[1]).map(([a, b]) => Object.assign({}, a, b));
+
+        if (apply[ty]) {
+          return finalLens.map(apply[ty]).execute({ id, quads });
+        } else {
+          return finalLens.execute({ id, quads });
+        }
+      }),
+    };
+  });
 
   return pathLens
     .and(nameLens, minCount, maxCount, clazzLens.or(dataTypeLens))
     .map((xs) => Object.assign({}, ...xs));
 }
 
-export function extractShape(cache: Cache): BasicLens<Cont, Shape[]> {
+export function extractShape(
+  cache: Cache,
+  subclasses: { [label: string]: string },
+  apply: { [label: string]: (item: any) => any },
+): BasicLens<Cont, Shape[]> {
   const checkTy = pred(RDF.terms.type)
     .one()
     .map(({ id }) => {
@@ -323,36 +329,38 @@ export function extractShape(cache: Cache): BasicLens<Cont, Shape[]> {
   const idLens = empty<Cont>().map(({ id }) => ({ id: id.value }));
   const clazzs = pred(SHACL.targetClass);
 
-  const multiple = clazzs.thenAll(
-    extractSubtypes()
-      .map((subTypes) => ({
-        subTypes,
-      }))
-      .and(empty<Cont>().map(({ id }) => ({ ty: id }))),
-  );
+  const multiple = clazzs.thenAll(empty<Cont>().map(({ id }) => ({ ty: id })));
 
   // TODO: Add implictTargetClass
   const descriptionClassLens = optionalField(SHACL.description, "description");
   const fields = pred(SHACL.property)
-    .thenSome(extractProperty(cache))
+    .thenSome(extractProperty(cache, subclasses, apply))
     .map((fields) => ({ fields }));
 
   return multiple
     .and(checkTy, idLens, descriptionClassLens, fields)
     .map(([multiple, ...others]) =>
-      multiple.map((xs) => <Shape>Object.assign({}, ...xs, ...others)),
+      multiple.map((xs) => <Shape>Object.assign({}, xs, ...others)),
     );
 }
 
-export function extractShapes(quads: Quad[]): {
+export function extractShapes(
+  quads: Quad[],
+  apply: { [label: string]: (item: any) => any } = {},
+): {
   shapes: Shape[];
   lenses: Cache;
+  subClasses: SubClasses;
 } {
   const cache: Cache = {};
+  const subClasses: SubClasses = {};
+  quads
+    .filter((x) => x.predicate.equals(RDFS.subClassOf))
+    .forEach((x) => (subClasses[x.subject.value] = x.object.value));
   const shapes = subjects()
     .then(unique())
     .asMulti()
-    .thenSome(extractShape(cache))
+    .thenSome(extractShape(cache, subClasses, apply))
     .execute(quads)
     .flat();
   const lenses = [];
@@ -361,16 +369,15 @@ export function extractShapes(quads: Quad[]): {
   for (let shape of shapes) {
     const lens = toLens(shape);
     const target = cache[shape.ty.value];
-    if (target && target.lens) {
-      cache[shape.ty.value] = {
-        lens: target.lens.or(lens),
-        subClasses: shape.subTypes,
-      };
+
+    if (target) {
+      cache[shape.ty.value] = target.or(lens);
+      // subClasses: shape.subTypes,
     } else {
-      cache[shape.ty.value] = { lens, subClasses: shape.subTypes };
+      cache[shape.ty.value] = lens;
     }
     lenses.push(lens);
   }
 
-  return { lenses: cache, shapes };
+  return { lenses: cache, shapes, subClasses };
 }

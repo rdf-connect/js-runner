@@ -9,24 +9,25 @@
 <> owl:imports <https://raw.githubusercontent.com/TREEcg/connector-architecture/main/channel/ws.ttl>.
 <> owl:imports <./processor/echo.ttl>,
   <./processor/send.ttl>,
-  <./processor/resc.ttl>.
+  <./processor/resc.ttl>, <./ontology.ttl>.
 
-[ ] a js:JsChannel;
+
+# :WsReaderChannel rdfs:subClassOf :ReaderChannel.
+# :WsWriterChannel rdfs:subClassOf :WriterChannel.
+# [ ] a sh:NodeShape;
+#   sh:targetClass :WsWriterChannel;
+#   sh:property [
+#     sh:path :wsUri;
+#     sh:datatype xsd:string;
+#     sh:name "uri";
+#   ].
+
+[ ] a :Channel;
   :reader <jr>;
   :writer <jw>.
+<jr> a js:JsReaderChannel.
+<jw> a js:JsWriterChannel.
 
-:WsReaderChannel rdfs:subClassOf :ReaderChannel.
-:WsWriterChannel rdfs:subClassOf :WriterChannel.
-[ ] a sh:NodeShape;
-  sh:targetClass :WsWriterChannel;
-  sh:property [
-    sh:path :wsUri;
-    sh:datatype xsd:string;
-    sh:name "uri";
-  ].
-
-<jr> a :JsReaderChannel.
-<jw> a :JsWriterChannel.
 [ ] a js:Send;
   js:msg "Hallo world";
   js:sendWriter <jw>.

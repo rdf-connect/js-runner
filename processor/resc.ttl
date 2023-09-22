@@ -18,7 +18,7 @@ js:Resc a js:JsProcess;
     a fno:Mapping;
     fno:parameterMapping [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter js:rescReader;
+      fnom:functionParameter "input";
       fnom:implementationParameterPosition "0"^^xsd:int;
     ];
   ].
@@ -28,6 +28,7 @@ js:Resc a js:JsProcess;
   sh:property [
     sh:class :ReaderChannel;
     sh:path js:rescReader;
-    sh:name "Channel to read from";
+    sh:name "input";
+    sh:maxCount 1;
   ].
 

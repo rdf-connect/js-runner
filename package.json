@@ -21,7 +21,6 @@
   "dependencies": {
     "@comunica/query-sparql": "^2.5.2",
     "@rdfjs/types": "^1.1.0",
-    "@treecg/connector-all": "^1.0.16",
     "@treecg/types": "^0.4.0",
     "@types/command-line-args": "^5.2.0",
     "@types/command-line-usage": "^5.0.2",

@@ -36,8 +36,9 @@ export type WriterConstructor<C extends Config> = (config: C) => {
   init: () => Promise<void>;
 };
 
-const JsOntology = createTermNamespace(
+export const JsOntology = createTermNamespace(
   "https://w3id.org/conn/js#",
+  "JsProcess",
   "JsChannel",
   "JsReaderChannel",
   "JsWriterChannel",
@@ -99,6 +100,7 @@ export class ChannelFactory {
 
           return this.jsChannelsNamedNodes[id];
         }
+
         if (c.channel.id.termType === "BlankNode") {
           if (!this.jsChannelsBlankNodes[id]) {
             this.jsChannelsBlankNodes[id] = new SimpleStream<string>();
@@ -106,6 +108,7 @@ export class ChannelFactory {
 
           return this.jsChannelsBlankNodes[id];
         }
+        throw "Should have found a thing";
       }
     }
     throw "Unknown reader channel " + config.ty.value;
@@ -157,6 +160,7 @@ export class ChannelFactory {
 
           return this.jsChannelsNamedNodes[id];
         }
+
         if (c.channel.id.termType === "BlankNode") {
           if (!this.jsChannelsBlankNodes[id]) {
             this.jsChannelsBlankNodes[id] = new SimpleStream<string>();
@@ -164,6 +168,7 @@ export class ChannelFactory {
 
           return this.jsChannelsBlankNodes[id];
         }
+        throw "Should have found a thing";
       }
     }
 

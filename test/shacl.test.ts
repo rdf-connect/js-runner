@@ -98,7 +98,7 @@ ${prefixes}
     const quads = parseQuads(data);
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
 
-    const object = output.lenses[quad.object.value].lens!.execute({
+    const object = output.lenses[quad.object.value].execute({
       id: quad.subject,
       quads,
     });
@@ -128,7 +128,7 @@ ${prefixes}
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
 
     expect(() =>
-      output.lenses[quad.object.value].lens!.execute({
+      output.lenses[quad.object.value].execute({
         id: quad.subject,
         quads,
       }),
@@ -154,7 +154,7 @@ ${prefixes}
     const quads = parseQuads(data);
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
 
-    const object = output.lenses[quad.object.value].lens!.execute({
+    const object = output.lenses[quad.object.value].execute({
       id: quad.subject,
       quads,
     });
@@ -179,7 +179,7 @@ ${prefixes}
 
     const quads = parseQuads(data);
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
-    const object = output.lenses[quad.object.value].lens!.execute({
+    const object = output.lenses[quad.object.value].execute({
       id: quad.subject,
       quads,
     });
@@ -212,7 +212,7 @@ ${prefixes}
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
 
     expect(() =>
-      output.lenses[quad.object.value].lens!.execute({
+      output.lenses[quad.object.value].execute({
         id: quad.subject,
         quads,
       }),
@@ -234,7 +234,7 @@ ${prefixes}
 
     const quads = parseQuads(data);
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
-    const object = output.lenses[quad.object.value].lens!.execute({
+    const object = output.lenses[quad.object.value].execute({
       id: quad.subject,
       quads,
     });
@@ -256,7 +256,7 @@ ${prefixes}
     const quads = parseQuads(data);
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
     expect(() =>
-      output.lenses[quad.object.value].lens!.execute({
+      output.lenses[quad.object.value].execute({
         id: quad.subject,
         quads,
       }),
@@ -291,7 +291,7 @@ ${prefixes}
 
     const quads = parseQuads(data);
     const quad = quads.find((x) => x.predicate.equals(RDF.terms.type))!;
-    const obj = output.lenses[quad.object.value].lens!.execute({
+    const obj = output.lenses[quad.object.value].execute({
       id: quad.subject,
       quads,
     });

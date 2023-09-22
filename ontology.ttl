@@ -38,7 +38,7 @@
     sh:path rdf:type;
     sh:name "ty";
     sh:maxCount 1;
-    sh:datatype xsd:string;
+    sh:datatype xsd:iri;
   ].
 
 [ ] a sh:NodeShape;
@@ -52,19 +52,17 @@
     sh:path rdf:type;
     sh:name "ty";
     sh:maxCount 1;
-    sh:datatype xsd:string;
+    sh:datatype xsd:iri;
   ].
 
-[ ] a sh:NodeShape;
-  sh:targetClass :JsReaderChannel,
-    js:JsReaderChannel,
-    js:JsWriterChannel,
-    :JsWriterChannel,
-    js:JsChannel.
-
+# [ ] a sh:NodeShape;
+#   sh:targetClass :JsReaderChannel,
+#     js:JsReaderChannel,
+#     js:JsWriterChannel,
+#     :JsWriterChannel,
+#     js:JsChannel.
 js:JsChannel rdfs:subClassOf :Channel.
-:JsReaderChannel rdfs:subClassOf :ReaderChannel.
-:JsWriterChannel rdfs:subClassOf :WriterChannel.
+
 js:JsReaderChannel rdfs:subClassOf :ReaderChannel.
 js:JsWriterChannel rdfs:subClassOf :WriterChannel.
 #
