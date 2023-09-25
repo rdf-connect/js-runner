@@ -6,10 +6,10 @@ export * from "./connectors";
 export * from "./shacl";
 
 import path from "path";
-import { extractShapes } from "./shacl";
+import { extractShapes, Shapes } from "./shacl";
 import { RDF } from "@treecg/types";
 import { ChannelFactory, Conn, JsOntology } from "./connectors";
-import { Term } from "@rdfjs/types";
+import { Quad, Term } from "@rdfjs/types";
 
 function safeJoin(a: string, b: string) {
   if (b.startsWith("/")) {
@@ -25,17 +25,83 @@ type Processor = {
   func: string;
   mapping: { parameters: { parameter: string; position: number }[] };
 };
+
+export type Source =
+  | { type: "remote"; location: string }
+  | {
+      type: "memory";
+      value: string;
+      baseIRI: string;
+    };
+
+export type Extracted = {
+  processors: Processor[];
+  quads: Quad[];
+  shapes: Shapes;
+};
+
+export async function extractProcessors(
+  source: Source,
+  apply?: { [label: string]: (item: any) => any },
+): Promise<Extracted> {
+  const store = new Store();
+  await load_store(source, store);
+  const quads = store.getQuads(null, null, null, null);
+
+  const config = extractShapes(quads, apply);
+  const subjects = quads
+    .filter(
+      (x) =>
+        x.predicate.equals(RDF.terms.type) &&
+        x.object.equals(JsOntology.JsProcess),
+    )
+    .map((x) => x.subject);
+  const processorLens = config.lenses[JsOntology.JsProcess.value];
+  const processors = subjects.map((id) => processorLens.execute({ id, quads }));
+  return { processors, quads, shapes: config };
+}
+
+export function extractSteps(
+  proc: Processor,
+  quads: Quad[],
+  config: Shapes,
+): any[][] {
+  const out: any[][] = [];
+
+  const subjects = quads
+    .filter(
+      (x) => x.predicate.equals(RDF.terms.type) && x.object.equals(proc.ty),
+    )
+    .map((x) => x.subject);
+  const processorLens = config.lenses[proc.ty.value];
+
+  const fields = proc.mapping.parameters;
+
+  for (let id of subjects) {
+    const obj = processorLens.execute({ id, quads });
+    const functionArgs = new Array(fields.length);
+
+    for (let field of fields) {
+      functionArgs[field.position] = obj[field.parameter];
+    }
+
+    out.push(functionArgs);
+  }
+
+  return out;
+}
+
 export async function jsRunner() {
   console.log("JS runner is running!");
   const args = getArgs();
   const cwd = process.cwd();
 
-  const store = new Store();
-  await load_store(safeJoin(cwd, args.input).replaceAll("\\", "/"), store);
-  const quads = store.getQuads(null, null, null, null);
+  const source: Source = {
+    location: safeJoin(cwd, args.input).replaceAll("\\", "/"),
+    type: "remote",
+  };
 
   const factory = new ChannelFactory();
-
   /// Small hack, if something is extracted from these types, that should be converted to a reader/writer
   const apply: { [label: string]: (item: any) => any } = {};
   for (let ty of [
@@ -58,41 +124,19 @@ export async function jsRunner() {
     apply[ty.value] = (x) => factory.createWriter(x);
   }
 
-  const config = extractShapes(quads, apply);
-  const subjects = quads
-    .filter(
-      (x) =>
-        x.predicate.equals(RDF.terms.type) &&
-        x.object.equals(JsOntology.JsProcess),
-    )
-    .map((x) => x.subject);
-  const processorLens = config.lenses[JsOntology.JsProcess.value];
-  const processors: Processor[] = subjects.map((id) =>
-    processorLens.execute({ id, quads }),
-  );
+  const {
+    processors,
+    quads,
+    shapes: config,
+  } = await extractProcessors(source, apply);
 
   const starts = [];
   for (let proc of processors) {
-    const subjects = quads
-      .filter(
-        (x) => x.predicate.equals(RDF.terms.type) && x.object.equals(proc.ty),
-      )
-      .map((x) => x.subject);
-    const processorLens = config.lenses[proc.ty.value];
-
-    const fields = proc.mapping.parameters;
+    const argss = extractSteps(proc, quads, config);
     const jsProgram = await import("file://" + proc.file);
     process.chdir(proc.location);
-
-    for (let id of subjects) {
-      const obj = processorLens.execute({ id, quads });
-      const functionArgs = new Array(fields.length);
-
-      for (let field of fields) {
-        functionArgs[field.position] = obj[field.parameter];
-      }
-
-      starts.push(await jsProgram[proc.func](...functionArgs));
+    for (let args of argss) {
+      starts.push(await jsProgram[proc.func](...args));
     }
   }
 

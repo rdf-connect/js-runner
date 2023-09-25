@@ -55,16 +55,10 @@
     sh:datatype xsd:iri;
   ].
 
-# [ ] a sh:NodeShape;
-#   sh:targetClass :JsReaderChannel,
-#     js:JsReaderChannel,
-#     js:JsWriterChannel,
-#     :JsWriterChannel,
-#     js:JsChannel.
 js:JsChannel rdfs:subClassOf :Channel.
-
 js:JsReaderChannel rdfs:subClassOf :ReaderChannel.
 js:JsWriterChannel rdfs:subClassOf :WriterChannel.
+
 #
 js:JsChannel a :Channel;
   dc:title "Javascript in memory channel";
@@ -119,7 +113,6 @@ js:JsProcessorShape a sh:NodeShape;
     sh:minCount 1;
   ], [
     sh:datatype xsd:string;
-    #  Not correct
     sh:path js:location;
     sh:name "location";
     sh:maxCount 1;

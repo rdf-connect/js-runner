@@ -1,17 +1,18 @@
 import { describe, expect, test } from "@jest/globals";
 import { writeFile } from "fs/promises";
 
-import * as conn from "../../src/connectors/index";
+import * as conn from "../../src/connectors";
+import { FileReaderConfig, FileWriterConfig } from "../../src/connectors/file";
 
 describe("File Channel", () => {
   test("Reader - Writer", async () => {
-    const config: conn.file.FileReaderConfig = {
+    const config: FileReaderConfig = {
       ty: conn.Conn.FileReaderChannel,
       path: "/tmp/test.txt",
       onReplace: true,
       encoding: "utf-8",
     };
-    const writerConfig: conn.file.FileReaderConfig = {
+    const writerConfig: FileWriterConfig = {
       ty: conn.Conn.FileWriterChannel,
       path: "/tmp/test.txt",
       onReplace: true,

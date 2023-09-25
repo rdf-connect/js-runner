@@ -5,11 +5,6 @@
 @prefix : <https://w3id.org/conn#>.
 @prefix sh: <http://www.w3.org/ns/shacl#>.
 
-<> :install [
-  a :LocalInstall;
-  :path <./>;
-].
-
 js:Send a js:JsProcess;
   js:file <./test.js>;
   js:function "send";

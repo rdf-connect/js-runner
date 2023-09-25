@@ -1,6 +1,6 @@
 {
   "name": "@ajuvercr/js-runner",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "description": "",
   "main": "./dist/index.js",
@@ -14,7 +14,8 @@
     "js-runner": "./bin/bundle.mjs"
   },
   "scripts": {
-    "build": "tsc && bun build ./bin/js-runner.js --outfile bin/bundle.mjs --target node",
+    "build": "tsc && bun build ./bin/js-runner.js --outfile bin/bundle.mjs --target node && npm run build:recompose",
+    "build:recompose": "sed -z 's/var __require = (id) => {\\n  return import.meta.require(id);\\n};/import Module from \"node:module\";\\nconst __require = Module.createRequire(import.meta.url);/' -i bin/bundle.mjs",
     "watch": "tsc -w",
     "test": "bun test"
   },

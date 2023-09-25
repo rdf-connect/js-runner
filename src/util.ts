@@ -5,6 +5,7 @@ import https from "https";
 import stream from "stream";
 import { DataFactory, Parser, Store, StreamParser } from "n3";
 import { createUriAndTermNamespace } from "@treecg/types";
+import { Source } from ".";
 
 export function toArray<T>(stream: stream.Readable): Promise<T[]> {
   const output: T[] = [];
@@ -52,7 +53,7 @@ async function get_readstream(location: string): Promise<stream.Readable> {
 
 export async function load_quads(location: string, baseIRI?: string) {
   try {
-    console.log("load_quads", location, baseIRI)
+    console.log("load_quads", location, baseIRI);
     const parser = new StreamParser({ baseIRI: baseIRI || location });
     const rdfStream = await get_readstream(location);
     rdfStream.pipe(parser);
@@ -66,33 +67,41 @@ export async function load_quads(location: string, baseIRI?: string) {
   }
 }
 
+function load_memory_quads(value: string, baseIRI: string) {
+  const parser = new Parser({ baseIRI });
+  return parser.parse(value);
+}
+
 const loaded = new Set();
 export async function load_store(
-  location: string,
+  location: Source,
   store: Store,
   recursive = true,
-  process?: (quads: RDF.Quad[], baseIRI: string) => PromiseLike<RDF.Quad[]>,
 ) {
   console.log("STARTING LOAD STORE");
-
-  const _process = process || ((q: RDF.Quad[]) => q);
 
   if (loaded.has(location)) return;
   loaded.add(location);
 
   console.log("Loading", location);
 
-  const quads = await load_quads(location);
-  store.addQuads(await _process(quads, location));
+  const quads =
+    location.type === "remote"
+      ? await load_quads(location.location)
+      : load_memory_quads(location.value, location.baseIRI);
+
+  store.addQuads(quads);
 
   if (recursive) {
+    const loc =
+      location.type === "remote" ? location.location : location.baseIRI;
     const other_imports = store.getObjects(
-      namedNode(location),
+      namedNode(loc),
       OWL.terms.imports,
       null,
     );
     for (let other of other_imports) {
-      await load_store(other.value, store, true, process);
+      await load_store({ location: other.value, type: "remote" }, store, true);
     }
   }
 }

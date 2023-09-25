@@ -214,8 +214,12 @@ function optionalField<T extends string, O = string>(
 }
 function dataTypeToExtract(dataType: Term, t: Term): any {
   if (dataType.equals(XSD.terms.integer)) return +t.value;
+  if (dataType.equals(XSD.terms.custom("float"))) return +t.value;
+  if (dataType.equals(XSD.terms.custom("double"))) return +t.value;
+  if (dataType.equals(XSD.terms.custom("decimal"))) return +t.value;
   if (dataType.equals(XSD.terms.string)) return t.value;
   if (dataType.equals(XSD.terms.dateTime)) return new Date(t.value);
+  if (dataType.equals(XSD.terms.custom("boolean"))) return t.value === "true";
 
   return t;
 }
@@ -344,14 +348,16 @@ export function extractShape(
     );
 }
 
-export function extractShapes(
-  quads: Quad[],
-  apply: { [label: string]: (item: any) => any } = {},
-): {
+export type Shapes = {
   shapes: Shape[];
   lenses: Cache;
   subClasses: SubClasses;
-} {
+};
+
+export function extractShapes(
+  quads: Quad[],
+  apply: { [label: string]: (item: any) => any } = {},
+): Shapes {
   const cache: Cache = {};
   const subClasses: SubClasses = {};
   quads

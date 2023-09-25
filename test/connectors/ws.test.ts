@@ -1,17 +1,18 @@
 import { describe, expect, test } from "@jest/globals";
 import { writeFile } from "fs/promises";
 
-import * as conn from "../../src/connectors/index";
+import * as conn from "../../src/connectors";
+import { WsReaderConfig, WsWriterConfig } from "../../src/connectors/ws";
 
 describe("connector-ws", () => {
   test("Should write -> WebSocket -> read", async () => {
-    const readerConfig: conn.ws.WsReaderConfig = {
+    const readerConfig: WsReaderConfig = {
       ty: conn.Conn.WsReaderChannel,
       host: "0.0.0.0",
       port: 8123,
     };
 
-    const writerConfig: conn.ws.WsWriterConfig = {
+    const writerConfig: WsWriterConfig = {
       ty: conn.Conn.WsWriterChannel,
       url: "ws://127.0.0.1:8123",
     };
