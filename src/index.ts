@@ -107,7 +107,7 @@ export async function jsRunner() {
   for (let ty of [
     Conn.FileReaderChannel,
     Conn.WsReaderChannel,
-    Conn.FileReaderChannel,
+    Conn.HttpReaderChannel,
     Conn.KafkaReaderChannel,
     JsOntology.JsReaderChannel,
   ]) {
@@ -117,7 +117,7 @@ export async function jsRunner() {
   for (let ty of [
     Conn.FileWriterChannel,
     Conn.WsWriterChannel,
-    Conn.FileWriterChannel,
+    Conn.HttpWriterChannel,
     Conn.KafkaWriterChannel,
     JsOntology.JsWriterChannel,
   ]) {

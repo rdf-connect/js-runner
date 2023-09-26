@@ -1,13 +1,14 @@
 {
   "name": "@ajuvercr/js-runner",
-  "version": "0.1.6",
+  "version": "0.1.8",
   "type": "module",
   "description": "",
   "main": "./dist/index.js",
   "files": [
-    "./dist/*",
+    "./dist/**/*",
     "./ontology.ttl",
-    "./processor/*"
+    "./processor/**/*",
+    "./channels/**/*"
   ],
   "types": "./dist/index.d.ts",
   "bin": {

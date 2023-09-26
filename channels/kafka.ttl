@@ -1,0 +1,98 @@
+@prefix : <https://w3id.org/conn#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+
+:KafkaReaderChannel rdfs:subClassOf :ReaderChannel.
+:KafkaReaderChannelShape a sh:NodeShape;
+  sh:targetClass :KafkaReaderChannel;
+  sh:property [
+    sh:path :kafkaTopic;
+    sh:name "topic";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class :KafkaTopic;
+    sh:description "Information about the used topic";
+  ], [
+    sh:path :kafkaConsumer;
+    sh:name "consumer";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class :KafkaConsumer;
+    sh:description "Information about the kafka consumer";
+  ], [
+    sh:path :kafkaBroker;
+    sh:name "broker";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class :KafkaBroker;
+    sh:description "Information about the kafka broker";
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :KafkaTopic;
+  sh:property [
+    sh:path :topicName;
+    sh:name "name";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+    sh:description "Name of the topic";
+  ], [
+    sh:path :topicFromBeginning;
+    sh:name "fromBeginning";
+    sh:maxCount 1;
+    sh:datatype xsd:boolean;
+    sh:description "Restart the topic from the beginning";
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :KafkaConsumer;
+  sh:property [
+    sh:path :groupId;
+    sh:name "groupId";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+    sh:description "Group identifier";
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :KafkaBroker;
+  sh:property [
+    sh:path :brokerHost;
+    sh:name "hosts";
+    sh:minCount 1;
+    sh:datatype xsd:string;
+    sh:description "Broker host to connect to";
+  ].
+
+:KafkaWriterChannel rdfs:subClassOf :WriterChannel.
+[ ] a sh:NodeShape;
+  sh:targetClass :KafkaWriterChannel;
+  sh:property [
+    sh:path :kafkaTopic;
+    sh:name "topic";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class :KafkaTopic;
+    sh:description "Information about the used topic";
+  ], [
+    sh:path :kafkaBroker;
+    sh:name "broker";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class :KafkaBroker;
+    sh:description "Information about the kafka broker";
+  ], [
+    sh:path :kafkaProducer;
+    sh:name "producer";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class :KafkaProducer;
+    sh:description "Information about the kafka producer";
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :KafkaProducer.
+

@@ -8,7 +8,12 @@ import type {
 } from "http";
 import { createServer } from "http";
 import type { Readable } from "stream";
-import { Config, ReaderConstructor, SimpleStream, WriterConstructor } from "../connectors";
+import {
+  Config,
+  ReaderConstructor,
+  SimpleStream,
+  WriterConstructor,
+} from "../connectors";
 
 function streamToString(stream: Readable): Promise<string> {
   const datas = <Buffer[]>[];
@@ -21,7 +26,7 @@ function streamToString(stream: Readable): Promise<string> {
 }
 
 export interface HttpReaderConfig extends Config {
-  host: string;
+  endpoint: string;
   port: number;
 }
 
@@ -64,7 +69,7 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
     new Promise<void>((res) => {
       const cb = (): void => res(undefined);
       if (server) {
-        server.listen(config.port, config.host, cb);
+        server.listen(config.port, config.endpoint, cb);
       } else {
         cb();
       }

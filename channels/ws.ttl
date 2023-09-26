@@ -1,0 +1,33 @@
+@prefix : <https://w3id.org/conn#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+
+:WsReaderChannel rdfs:subClassOf :ReaderChannel.
+:WsWriterChannel rdfs:subClassOf :WriterChannel.
+[ ] a sh:NodeShape;
+  sh:targetClass :WsReaderChannel;
+  sh:property [
+    sh:name "url";
+    sh:path :wsUrl;
+    sh:datatype xsd:string;
+    sh:maxCount 1;
+    sh:minCount 1;
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :WsWriterChannel;
+  sh:property [
+    sh:name "port";
+    sh:path :wsPort;
+    sh:datatype xsd:integer;
+    sh:maxCount 1;
+    sh:minCount 1;
+  ], [
+    sh:name "host";
+    sh:path :wsHost;
+    sh:datatype xsd:string;
+    sh:maxCount 1;
+    sh:minCount 1;
+  ].
+

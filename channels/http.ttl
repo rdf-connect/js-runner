@@ -1,0 +1,41 @@
+@prefix : <https://w3id.org/conn#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+
+:HttpReaderChannel rdfs:subClassOf :ReaderChannel.
+:HttpWriterChannel rdfs:subClassOf :WriterChannel.
+[ ] a sh:NodeShape;
+  sh:targetClass :HttpReaderChannel;
+  sh:property [
+    sh:path :httpEndpoint;
+    sh:name "endpoint";
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+    sh:description "Used endpoint";
+  ], [
+    sh:path :fileOnReplace;
+    sh:name "port";
+    sh:maxCount 1;
+    sh:datatype xsd:integer;
+    sh:description "Used port";
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass :HttpWriterChannel;
+  sh:property [
+    sh:path :httpEndpoint;
+    sh:name "endpoint";
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:datatype xsd:string;
+    sh:description "Used endpoint";
+  ], [
+    sh:path :httpMethod;
+    sh:name "method";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+    sh:description "Used method";
+  ].
+
