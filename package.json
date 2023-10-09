@@ -1,6 +1,6 @@
 {
   "name": "@ajuvercr/js-runner",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "type": "module",
   "description": "",
   "main": "./dist/index.js",
