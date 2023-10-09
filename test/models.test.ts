@@ -1,7 +1,4 @@
 import { describe, expect, test } from "@jest/globals";
-import { Parser } from "n3";
-import { BasicLens, subjects, unique } from "rdf-lens";
-import { ProcessorLens } from "../src/models";
 
 const prefixes = `
 @prefix js: <https://w3id.org/conn/js#> .
@@ -60,5 +57,5 @@ js:Echo a js:JsProcess;
   test("2 + 2 = 4", () => {
     const four = 2 + 2;
     expect(four).toBe(4);
-  })
-})
+  });
+});

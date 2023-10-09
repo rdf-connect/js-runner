@@ -65,8 +65,9 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
   };
 
   server = createServer(requestListener);
-  const init = () =>
-    new Promise<void>((res) => {
+  const init = () => {
+    console.log("HTTP init!");
+    return new Promise<void>((res) => {
       const cb = (): void => res(undefined);
       if (server) {
         server.listen(config.port, config.endpoint, cb);
@@ -74,19 +75,19 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
         cb();
       }
     });
-
+  };
   return { reader: stream, init };
 };
 
 export interface HttpWriterConfig extends Config {
-  url: string;
+  endpoint: string;
   method: string;
 }
 
 export const startHttpStreamWriter: WriterConstructor<HttpWriterConfig> = (
   config,
 ) => {
-  const requestConfig = <https.RequestOptions>new URL(config.url);
+  const requestConfig = <https.RequestOptions>new URL(config.endpoint);
 
   const push = async (item: string): Promise<void> => {
     await new Promise((res) => {

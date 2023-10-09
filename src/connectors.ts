@@ -7,28 +7,31 @@ import {
   startFileStreamReader,
   startFileStreamWriter,
 } from "./connectors/file";
-export { FileReaderConfig, FileWriterConfig };
+export * from "./connectors/file";
+
 import {
   startWsStreamReader,
   startWsStreamWriter,
   WsReaderConfig,
   WsWriterConfig,
 } from "./connectors/ws";
-export { WsReaderConfig, WsWriterConfig };
+export * from "./connectors/ws";
+
 import {
   KafkaReaderConfig,
   KafkaWriterConfig,
   startKafkaStreamReader,
   startKafkaStreamWriter,
 } from "./connectors/kafka";
-export { KafkaReaderConfig, KafkaWriterConfig };
+export * from "./connectors/kafka";
+
 import {
   HttpReaderConfig,
   HttpWriterConfig,
   startHttpStreamReader,
   startHttpStreamWriter,
 } from "./connectors/http";
-export { HttpReaderConfig, HttpWriterConfig };
+export * from "./connectors/http";
 
 export const Conn = createTermNamespace(
   "https://w3id.org/conn#",

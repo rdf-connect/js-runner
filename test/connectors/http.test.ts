@@ -5,12 +5,12 @@ import { HttpReaderConfig, HttpWriterConfig } from "../../src/connectors/http";
 describe("connector-http", () => {
   test("Should write -> HTTP -> read", async () => {
     const readerConfig: HttpReaderConfig = {
-      host: "localhost",
+      endpoint: "localhost",
       port: 8080,
       ty: conn.Conn.HttpReaderChannel,
     };
     const writerConfig: HttpWriterConfig = {
-      url: "http://localhost:8080",
+      endpoint: "http://localhost:8080",
       method: "POST",
       ty: conn.Conn.HttpWriterChannel,
     };

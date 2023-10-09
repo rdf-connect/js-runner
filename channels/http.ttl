@@ -14,7 +14,7 @@
     sh:datatype xsd:string;
     sh:description "Used endpoint";
   ], [
-    sh:path :fileOnReplace;
+    sh:path :httpPort;
     sh:name "port";
     sh:maxCount 1;
     sh:datatype xsd:integer;

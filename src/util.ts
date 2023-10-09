@@ -1,4 +1,3 @@
-import * as RDF from "rdf-js";
 import { createReadStream } from "fs";
 import http from "http";
 import https from "https";
@@ -6,6 +5,7 @@ import stream from "stream";
 import { DataFactory, Parser, Store, StreamParser } from "n3";
 import { createUriAndTermNamespace } from "@treecg/types";
 import { Source } from ".";
+import { Quad, Term } from "@rdfjs/types";
 
 export function toArray<T>(stream: stream.Readable): Promise<T[]> {
   const output: T[] = [];
@@ -33,7 +33,7 @@ export const CONN2 = createUriAndTermNamespace(
 );
 const { namedNode } = DataFactory;
 
-export type Keyed<T> = { [Key in keyof T]: RDF.Term | undefined };
+export type Keyed<T> = { [Key in keyof T]: Term | undefined };
 
 export type Map<V, K, T, O> = (value: V, key: K, item: T) => O;
 
@@ -58,7 +58,7 @@ export async function load_quads(location: string, baseIRI?: string) {
     const rdfStream = await get_readstream(location);
     rdfStream.pipe(parser);
 
-    const quads: RDF.Quad[] = await toArray(parser);
+    const quads: Quad[] = await toArray(parser);
     return quads;
   } catch (ex) {
     console.error("Failed to load_quads", location, baseIRI);
@@ -78,12 +78,8 @@ export async function load_store(
   store: Store,
   recursive = true,
 ) {
-  console.log("STARTING LOAD STORE");
-
   if (loaded.has(location)) return;
   loaded.add(location);
-
-  console.log("Loading", location);
 
   const quads =
     location.type === "remote"

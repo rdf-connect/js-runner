@@ -2,13 +2,25 @@ import { createReadStream, openSync } from "fs";
 import { appendFile, readFile, stat, writeFile } from "fs/promises";
 import { isAbsolute } from "path";
 import { watch } from "node:fs";
-import { Config, ReaderConstructor, SimpleStream, WriterConstructor } from "../connectors";
+import {
+  Config,
+  ReaderConstructor,
+  SimpleStream,
+  WriterConstructor,
+} from "../connectors";
 
 interface FileError extends Error {
   code: string;
 }
 
 export interface FileReaderConfig extends Config {
+  path: string;
+  onReplace: boolean;
+  readFirstContent?: boolean;
+  encoding?: string;
+}
+
+export interface FileWriterConfig extends Config {
   path: string;
   onReplace: boolean;
   readFirstContent?: boolean;
@@ -96,7 +108,7 @@ export const startFileStreamReader: ReaderConstructor<FileReaderConfig> = (
   return { reader, init };
 };
 
-export type FileWriterConfig = FileReaderConfig;
+// export interface FileWriterConfig extends FileReaderConfig {}
 
 export const startFileStreamWriter: WriterConstructor<FileWriterConfig> = (
   config,
@@ -113,7 +125,6 @@ export const startFileStreamWriter: WriterConstructor<FileWriterConfig> = (
   };
 
   const push = async (item: string): Promise<void> => {
-    console.log("Writing!", item);
     if (config.onReplace) {
       await writeFile(path, item, { encoding });
     } else {

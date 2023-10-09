@@ -6,7 +6,7 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix sh: <http://www.w3.org/ns/shacl#>.
 
-<> owl:imports <https://raw.githubusercontent.com/TREEcg/connector-architecture/main/channel/ws.ttl>.
+<> owl:imports <./channels/ws.ttl>.
 <> owl:imports <./processor/echo.ttl>,
   <./processor/send.ttl>,
   <./processor/resc.ttl>,
