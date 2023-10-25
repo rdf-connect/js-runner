@@ -1,5 +1,7 @@
 # Js-runner
 
+[![Bun CI](https://github.com/ajuvercr/js-runner/actions/workflows/build-test.yml/badge.svg)](https://github.com/ajuvercr/js-runner/actions/workflows/build-test.yml)
+
 Executor for a javascript workbench. Starting from a turtle file describing the workbench.
 
 ## Process definition
