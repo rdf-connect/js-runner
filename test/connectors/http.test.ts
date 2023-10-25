@@ -1,14 +1,15 @@
 import { describe, expect, test } from "@jest/globals";
-import * as conn from "../../src/connectors/index";
+import { HttpReaderConfig, HttpWriterConfig} from "../../src/connectors/http";
+import * as conn from "../../src/connectors";
 
 describe("connector-http", () => {
   test("Should write -> HTTP -> read", async () => {
-    const readerConfig: conn.http.HttpReaderConfig = {
+    const readerConfig: HttpReaderConfig = {
       host: "localhost",
       port: 8080,
       ty: conn.Conn.HttpReaderChannel,
     };
-    const writerConfig: conn.http.HttpWriterConfig = {
+    const writerConfig: HttpWriterConfig = {
       url: "http://localhost:8080",
       method: "POST",
       ty: conn.Conn.HttpWriterChannel,
