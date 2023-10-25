@@ -1,6 +1,4 @@
 import { describe, expect, test } from "@jest/globals";
-import { writeFile } from "fs/promises";
-
 import * as conn from "../../src/connectors";
 import { WsReaderConfig, WsWriterConfig } from "../../src/connectors/ws";
 
