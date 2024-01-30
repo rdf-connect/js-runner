@@ -15,19 +15,23 @@ import {
   WriterConstructor,
 } from "../connectors";
 
-function streamToString(stream: Readable): Promise<string> {
+function streamToString(stream: Readable, binary: boolean): Promise<string | Buffer> {
   const datas = <Buffer[]>[];
   return new Promise((res) => {
     stream.on("data", (data) => {
       datas.push(data);
     });
-    stream.on("end", () => res(Buffer.concat(datas).toString()));
+    stream.on("end", () => {
+      const streamData = Buffer.concat(datas);
+      res(binary ? streamData : streamData.toString())
+    });
   });
 }
 
 export interface HttpReaderConfig extends Config {
   endpoint: string;
   port: number;
+  binary: boolean;
 }
 
 export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
@@ -35,7 +39,7 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
 ) => {
   let server: Server;
 
-  const stream = new SimpleStream<string>(
+  const stream = new SimpleStream<string | Buffer>(
     () =>
       new Promise((res) => {
         const cb = (): void => res();
@@ -52,7 +56,7 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
     res: ServerResponse,
   ) {
     try {
-      const content = await streamToString(req);
+      const content = await streamToString(req, config.binary);
       stream.push(content).catch((error) => {
         throw error;
       });

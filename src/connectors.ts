@@ -50,7 +50,7 @@ export interface Config {
 }
 
 export type ReaderConstructor<C extends Config> = (config: C) => {
-  reader: Stream<string>;
+  reader: Stream<string | Buffer>;
   init: () => Promise<void>;
 };
 
@@ -77,7 +77,7 @@ export class ChannelFactory {
   private jsChannelsNamedNodes: { [label: string]: SimpleStream<string> } = {};
   private jsChannelsBlankNodes: { [label: string]: SimpleStream<string> } = {};
 
-  createReader(config: Config): Stream<string> {
+  createReader(config: Config): Stream<string | Buffer> {
     if (config.ty.equals(Conn.FileReaderChannel)) {
       const { reader, init } = startFileStreamReader(<FileReaderConfig>config);
       this.inits.push(init);
