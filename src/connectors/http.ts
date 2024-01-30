@@ -93,7 +93,7 @@ export const startHttpStreamWriter: WriterConstructor<HttpWriterConfig> = (
 ) => {
   const requestConfig = <https.RequestOptions>new URL(config.endpoint);
 
-  const push = async (item: string): Promise<void> => {
+  const push = async (item: string | Buffer): Promise<void> => {
     await new Promise((res) => {
       const options = {
         hostname: requestConfig.hostname,

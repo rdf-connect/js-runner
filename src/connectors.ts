@@ -55,7 +55,7 @@ export type ReaderConstructor<C extends Config> = (config: C) => {
 };
 
 export type WriterConstructor<C extends Config> = (config: C) => {
-  writer: Writer<string>;
+  writer: Writer<string | Buffer>;
   init: () => Promise<void>;
 };
 
@@ -131,7 +131,7 @@ export class ChannelFactory {
     throw "Unknown reader channel " + config.ty.value;
   }
 
-  createWriter(config: Config): Writer<string> {
+  createWriter(config: Config): Writer<string | Buffer> {
     if (config.ty.equals(Conn.FileWriterChannel)) {
       const { writer, init } = startFileStreamWriter(<FileWriterConfig>config);
       this.inits.push(init);
