@@ -19,6 +19,12 @@
     sh:maxCount 1;
     sh:datatype xsd:integer;
     sh:description "Used port";
+  ], [
+    sh:path :binary;
+    sh:name "binary";
+    sh:maxCount 1;
+    sh:datatype xsd:boolean;
+    sh:description "Stream raw bytes if true";
   ].
 
 [ ] a sh:NodeShape;

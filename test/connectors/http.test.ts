@@ -7,6 +7,7 @@ describe("connector-http", () => {
     const readerConfig: HttpReaderConfig = {
       endpoint: "localhost",
       port: 8080,
+      binary: false,
       ty: conn.Conn.HttpReaderChannel,
     };
     const writerConfig: HttpWriterConfig = {
