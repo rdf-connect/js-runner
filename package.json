@@ -12,7 +12,7 @@
   ],
   "types": "./dist/index.d.ts",
   "bin": {
-    "js-runner": "./bin/bundle.mjs"
+    "js-runner": "bin/bundle.mjs"
   },
   "scripts": {
     "build": "tsc && bun build ./bin/js-runner.js --outfile bin/bundle.mjs --target node && npm run build:recompose",
