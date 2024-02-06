@@ -95,6 +95,72 @@ describe("test existing processors", () => {
     expect(writer.ty).toBeDefined();
   });
 
+  describe("send.ttl from env", async () => {
+    const value = `${prefixes}
+<> owl:imports <./ontology.ttl>, <./processor/send.ttl> .
+
+[ ] a :Channel;
+  :reader <jr>;
+  :writer <jw>.
+<jr> a js:JsReaderChannel.
+<jw> a js:JsWriterChannel.
+[ ] a js:Send;
+  js:msg [
+    a :EnvVariable;
+    :envDefault "FromEnv";
+    :envKey "msg"
+  ];
+  js:sendWriter <jw>.
+`;
+    const baseIRI = process.cwd() + "/config.ttl";
+    console.log(baseIRI);
+
+    const source: Source = {
+      value,
+      baseIRI,
+      type: "memory",
+    };
+
+    const {
+      processors,
+      quads,
+      shapes: config,
+    } = await extractProcessors(source);
+
+    test("Env default value", () => {
+      const proc = processors.find((x) => x.ty.value === JS + "Send");
+      expect(proc).toBeDefined();
+
+      const argss = extractSteps(proc!, quads, config);
+      expect(argss.length).toBe(1);
+      expect(argss[0].length).toBe(2);
+
+      const [[msg, writer]] = argss;
+      expect(msg).toBe("FromEnv");
+      expect(writer).toBeInstanceOf(Object);
+      expect(writer.channel).toBeDefined();
+      expect(writer.channel.id).toBeDefined();
+      expect(writer.ty).toBeDefined();
+    });
+
+    test("Env value", () => {
+      process.env["msg"] = "FROM ENV";
+      const proc = processors.find((x) => x.ty.value === JS + "Send");
+      expect(proc).toBeDefined();
+
+      const argss = extractSteps(proc!, quads, config);
+      expect(argss.length).toBe(1);
+      expect(argss[0].length).toBe(2);
+
+      const [[msg, writer]] = argss;
+      expect(msg).toBe("FROM ENV");
+      expect(writer).toBeInstanceOf(Object);
+      expect(writer.channel).toBeDefined();
+      expect(writer.channel.id).toBeDefined();
+      expect(writer.ty).toBeDefined();
+    });
+  });
+
   test("echo.ttl", async () => {
     const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/echo.ttl> .

@@ -30,8 +30,11 @@ export const CONN2 = createUriAndTermNamespace(
   "url",
   "procFile",
   "path",
+  "EnvVariable",
+  "envKey",
+  "envDefault",
 );
-const { namedNode } = DataFactory;
+export const { namedNode, literal } = DataFactory;
 
 export type Keyed<T> = { [Key in keyof T]: Term | undefined };
 

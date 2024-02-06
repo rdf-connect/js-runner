@@ -10,6 +10,7 @@ import {
   subjects,
   unique,
 } from "rdf-lens";
+import { CONN2, literal } from "./util";
 
 export const RDFS = createTermNamespace(
   "http://www.w3.org/2000/01/rdf-schema#",
@@ -212,6 +213,7 @@ function optionalField<T extends string, O = string>(
       return out;
     });
 }
+
 function dataTypeToExtract(dataType: Term, t: Term): any {
   if (dataType.equals(XSD.terms.integer)) return +t.value;
   if (dataType.equals(XSD.terms.custom("float"))) return +t.value;
@@ -222,6 +224,42 @@ function dataTypeToExtract(dataType: Term, t: Term): any {
   if (dataType.equals(XSD.terms.custom("boolean"))) return t.value === "true";
 
   return t;
+}
+
+function envLens(dataType: Term): BasicLens<Cont, any> {
+  const checkType = pred(RDF.terms.type)
+    .thenSome(
+      new BasicLens(({ id }) => {
+        if (!id.equals(CONN2.terms.EnvVariable)) {
+          throw "expected type " + CONN2.EnvVariable;
+        }
+        return { checked: true };
+      }),
+    )
+    .expectOne();
+
+  const envName = pred(CONN2.terms.envKey)
+    .one()
+    .map(({ id }) => ({
+      key: id.value,
+    }));
+
+  const defaultValue = pred(CONN2.terms.envDefault)
+    .one(undefined)
+    .map((found) => ({
+      defaultValue: found?.id.value,
+    }));
+
+  return checkType
+    .and(envName, defaultValue)
+    .map(([_, { key }, { defaultValue }]) => {
+      const value = process.env[key] || defaultValue;
+      if (value) {
+        return dataTypeToExtract(dataType, literal(value));
+      } else {
+        throw "Nothing set for ENV " + key + ". No default was set either!";
+      }
+    });
 }
 
 type Cache = {
@@ -251,7 +289,9 @@ function extractProperty(
     pred(SHACL.datatype)
       .one()
       .map(({ id }) => ({
-        extract: empty<Cont>().map((item) => dataTypeToExtract(id, item.id)),
+        extract: envLens(id).or(
+          empty<Cont>().map((item) => dataTypeToExtract(id, item.id)),
+        ),
       }));
 
   const clazzLens: BasicLens<Cont, { extract: ShapeField["extract"] }> = field(

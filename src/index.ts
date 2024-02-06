@@ -56,6 +56,7 @@ export async function extractProcessors(
         x.object.equals(JsOntology.JsProcess),
     )
     .map((x) => x.subject);
+  console.log("Finding", JsOntology.JsChannel.value)
   const processorLens = config.lenses[JsOntology.JsProcess.value];
   const processors = subjects.map((id) => processorLens.execute({ id, quads }));
   return { processors, quads, shapes: config };
@@ -148,3 +149,4 @@ export async function jsRunner() {
     }
   }
 }
+
