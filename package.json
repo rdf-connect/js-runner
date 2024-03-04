@@ -1,10 +1,10 @@
 {
   "name": "@ajuvercr/js-runner",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "type": "module",
   "exports": {
-    "import": "dist/index.js",
-    "require": "dist/index.cjs"
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs"
   },
   "description": "",
   "main": "./dist/index.js",
