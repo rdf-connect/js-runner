@@ -25,6 +25,12 @@
     sh:maxCount 1;
     sh:datatype xsd:boolean;
     sh:description "Stream raw bytes if true";
+  ], [
+    sh:path :waitHandled;
+    sh:name "waitHandled";
+    sh:maxCount 1;
+    sh:datatype xsd:boolean;
+    sh:description "Wait for handlers to be have handled the incoming message";
   ].
 
 [ ] a sh:NodeShape;

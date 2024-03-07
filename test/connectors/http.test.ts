@@ -43,6 +43,7 @@ describe("connector-http", () => {
       endpoint: "localhost",
       port: 8081,
       binary: true,
+      waitHandled: false,
       ty: conn.Conn.HttpReaderChannel,
     };
     const writerConfig: HttpWriterConfig = {
@@ -56,6 +57,7 @@ describe("connector-http", () => {
     const writer = factory.createWriter(writerConfig);
     
     reader.data((data) => {
+      console.log("This reader works")
       expect(Buffer.isBuffer(data)).toBeTruthy();
       items.push(data.toString());
     });
@@ -70,6 +72,46 @@ describe("connector-http", () => {
     await sleep(200);
 
     expect(items).toEqual(["test1", "test2"]);
+
+    await Promise.all([reader.end(), writer.end()]);
+  });
+
+  test("Should write -> HTTP -> read (Buffer) and await response", async () => {
+    const readerConfig: HttpReaderConfig = {
+      endpoint: "localhost",
+      port: 8082,
+      binary: true,
+      waitHandled: true,
+      ty: conn.Conn.HttpReaderChannel,
+    };
+    const writerConfig: HttpWriterConfig = {
+      endpoint: "http://localhost:8082",
+      method: "POST",
+      ty: conn.Conn.HttpWriterChannel,
+    };
+
+    const factory = new conn.ChannelFactory();
+    const reader = factory.createReader(readerConfig);
+    const writer = factory.createWriter(writerConfig);
+    
+    reader.data(async (data) => {
+      expect(Buffer.isBuffer(data)).toBeTruthy();
+      items.push(data.toString());
+      await sleep(1500);
+    });
+
+    await factory.init();
+
+    const items: unknown[] = [];
+
+    const start = new Date().getTime();
+    await writer.push(Buffer.from("test1", "utf8"));
+    const end = new Date().getTime();
+    await sleep(200);
+
+
+    expect(end - start > 1000).toBeTruthy();
+    expect(items).toEqual(["test1"]);
 
     await Promise.all([reader.end(), writer.end()]);
   });
