@@ -35,7 +35,8 @@ export interface HttpReaderConfig extends Config {
   endpoint: string;
   port: number;
   binary: boolean;
-  waitHandled: boolean;
+  waitHandled?: boolean;
+  responseCode?: number;
 }
 
 export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
@@ -46,10 +47,9 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
   const stream = new SimpleStream<string | Buffer>(
     () =>
       new Promise((res) => {
-        console.log("Server is defined", !!server);
         if (server !== undefined) {
           server.close(() => {
-            res()
+            res();
           });
         } else {
           res();
@@ -74,13 +74,12 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
       console.error("Failed", error);
     }
 
-    res.writeHead(200);
+    res.writeHead(config.responseCode || 200);
     res.end("OK");
   };
 
   server = createServer(requestListener);
   const init = () => {
-    console.log("HTTP init!");
     return new Promise<void>((res) => {
       const cb = (): void => res(undefined);
       if (server) {

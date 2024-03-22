@@ -19,7 +19,7 @@ describe("connector-http", () => {
     const factory = new conn.ChannelFactory();
     const reader = factory.createReader(readerConfig);
     const writer = factory.createWriter(writerConfig);
-    
+
     reader.data((data) => {
       items.push(data);
     });
@@ -55,9 +55,9 @@ describe("connector-http", () => {
     const factory = new conn.ChannelFactory();
     const reader = factory.createReader(readerConfig);
     const writer = factory.createWriter(writerConfig);
-    
+
     reader.data((data) => {
-      console.log("This reader works")
+      console.log("This reader works");
       expect(Buffer.isBuffer(data)).toBeTruthy();
       items.push(data.toString());
     });
@@ -93,7 +93,7 @@ describe("connector-http", () => {
     const factory = new conn.ChannelFactory();
     const reader = factory.createReader(readerConfig);
     const writer = factory.createWriter(writerConfig);
-    
+
     reader.data(async (data) => {
       expect(Buffer.isBuffer(data)).toBeTruthy();
       items.push(data.toString());
@@ -109,11 +109,41 @@ describe("connector-http", () => {
     const end = new Date().getTime();
     await sleep(200);
 
-
     expect(end - start > 1000).toBeTruthy();
     expect(items).toEqual(["test1"]);
 
     await Promise.all([reader.end(), writer.end()]);
+  });
+
+  test("http channel uses correct response code", async () => {
+    const readerConfig: HttpReaderConfig = {
+      endpoint: "localhost",
+      port: 8083,
+      binary: false,
+      responseCode: 202,
+      ty: conn.Conn.HttpReaderChannel,
+    };
+
+    const factory = new conn.ChannelFactory();
+    const reader = factory.createReader(readerConfig);
+
+    reader.data((data) => {
+      items.push(data);
+    });
+
+    await factory.init();
+
+    const items: unknown[] = [];
+
+    const resp = await fetch("http://localhost:8083", {
+      body: "test1",
+      method: "PUT",
+    });
+
+    expect(items).toEqual(["test1"]);
+    expect(resp.status).toEqual(202);
+
+    await Promise.all([reader.end()]);
   });
 });
 

@@ -31,6 +31,12 @@
     sh:maxCount 1;
     sh:datatype xsd:boolean;
     sh:description "Wait for handlers to be have handled the incoming message";
+  ], [
+    sh:path :responseCode;
+    sh:name "responseCode";
+    sh:maxCount 1;
+    sh:datatype xsd:integer;
+    sh:description "Specify the expected response code (default 200)";
   ].
 
 [ ] a sh:NodeShape;
