@@ -103,7 +103,7 @@ export const startHttpStreamWriter: WriterConstructor<HttpWriterConfig> = (
   const requestConfig = <https.RequestOptions>new URL(config.endpoint);
 
   const push = async (item: string | Buffer): Promise<void> => {
-    await new Promise(async (res) => {
+    await new Promise(async (resolve) => {
       const options = {
         hostname: requestConfig.hostname,
         path: requestConfig.path,
@@ -114,8 +114,7 @@ export const startHttpStreamWriter: WriterConstructor<HttpWriterConfig> = (
       const cb = (response: IncomingMessage): void => {
         response.on("data", () => {});
         response.on("end", () => {
-          console.log("Incoming message ended");
-          res(null);
+          resolve(null);
         });
       };
 
