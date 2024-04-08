@@ -7,7 +7,7 @@ import {
 import { RawData, WebSocket } from "ws";
 import { WebSocketServer } from "ws";
 
-export interface WsWriterConfig extends Config {
+export interface WsWriterConfig {
   url: string;
 }
 
@@ -27,7 +27,7 @@ function connectWs(url: string): Promise<WebSocket> {
   return new Promise((res) => _connectWs(url, res));
 }
 
-export interface WsReaderConfig extends Config {
+export interface WsReaderConfig {
   host: string;
   port: number;
 }

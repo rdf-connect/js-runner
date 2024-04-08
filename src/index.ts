@@ -3,13 +3,13 @@ import { getArgs } from "./args";
 import { load_store } from "./util";
 
 export * from "./connectors";
-export * from "./shacl";
 
 import path from "path";
-import { extractShapes, Shapes } from "./shacl";
 import { RDF } from "@treecg/types";
 import { ChannelFactory, Conn, JsOntology } from "./connectors";
 import { Quad, Term } from "@rdfjs/types";
+
+import { extractShapes, Shapes } from "rdf-lens";
 
 function safeJoin(a: string, b: string) {
   if (b.startsWith("/")) {
@@ -56,7 +56,6 @@ export async function extractProcessors(
         x.object.equals(JsOntology.JsProcess),
     )
     .map((x) => x.subject);
-  console.log("Finding", JsOntology.JsChannel.value)
   const processorLens = config.lenses[JsOntology.JsProcess.value];
   const processors = subjects.map((id) => processorLens.execute({ id, quads }));
   return { processors, quads, shapes: config };
@@ -93,7 +92,6 @@ export function extractSteps(
 }
 
 export async function jsRunner() {
-  console.log("JS runner is running!");
   const args = getArgs();
   const cwd = process.cwd();
 
@@ -105,25 +103,8 @@ export async function jsRunner() {
   const factory = new ChannelFactory();
   /// Small hack, if something is extracted from these types, that should be converted to a reader/writer
   const apply: { [label: string]: (item: any) => any } = {};
-  for (let ty of [
-    Conn.FileReaderChannel,
-    Conn.WsReaderChannel,
-    Conn.HttpReaderChannel,
-    Conn.KafkaReaderChannel,
-    JsOntology.JsReaderChannel,
-  ]) {
-    apply[ty.value] = (x) => factory.createReader(x);
-  }
-
-  for (let ty of [
-    Conn.FileWriterChannel,
-    Conn.WsWriterChannel,
-    Conn.HttpWriterChannel,
-    Conn.KafkaWriterChannel,
-    JsOntology.JsWriterChannel,
-  ]) {
-    apply[ty.value] = (x) => factory.createWriter(x);
-  }
+  apply[Conn.ReaderChannel.value] = factory.createReader.bind(factory);
+  apply[Conn.WriterChannel.value] = factory.createWriter.bind(factory);
 
   const {
     processors,

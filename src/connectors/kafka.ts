@@ -40,7 +40,7 @@ export interface CSTopic {
   topic: string;
   fromBeginning?: boolean;
 }
-export interface KafkaReaderConfig extends Config {
+export interface KafkaReaderConfig {
   topic: {
     name: string;
     fromBeginning?: boolean;
@@ -106,7 +106,7 @@ export const startKafkaStreamReader: ReaderConstructor<KafkaReaderConfig> = (
   return { reader: stream, init };
 };
 
-export interface KafkaWriterConfig extends Config {
+export interface KafkaWriterConfig {
   topic: {
     name: string;
   };

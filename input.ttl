@@ -19,7 +19,7 @@
 <jr> a js:JsReaderChannel.
 <jw> a js:JsWriterChannel.
 [ ] a js:Send;
-  js:msg "Hallo world";
+  js:msg "Hello";
   js:sendWriter <jw>.
 
 [ ] a js:Resc;

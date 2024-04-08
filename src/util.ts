@@ -56,7 +56,6 @@ async function get_readstream(location: string): Promise<stream.Readable> {
 
 export async function load_quads(location: string, baseIRI?: string) {
   try {
-    console.log("load_quads", location, baseIRI);
     const parser = new StreamParser({ baseIRI: baseIRI || location });
     const rdfStream = await get_readstream(location);
     rdfStream.pipe(parser);

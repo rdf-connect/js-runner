@@ -6,13 +6,11 @@ import * as conn from "../../src/connectors";
 describe("File Channel", () => {
   test("Reader - Writer", async () => {
     const config: FileReaderConfig = {
-      ty: conn.Conn.FileReaderChannel,
       path: "/tmp/test.txt",
       onReplace: true,
       encoding: "utf-8",
     };
-    const writerConfig: FileReaderConfig = {
-      ty: conn.Conn.FileWriterChannel,
+    const writerConfig: FileWriterConfig = {
       path: "/tmp/test.txt",
       onReplace: true,
       encoding: "utf-8",
@@ -23,14 +21,20 @@ describe("File Channel", () => {
     const factory = new conn.ChannelFactory();
     const items: string[] = [];
 
-    const reader = factory.createReader(config);
+    const reader = factory.createReader({
+      config,
+      ty: conn.Conn.FileReaderChannel,
+    });
     expect(reader).toBeInstanceOf(conn.SimpleStream);
 
     reader.data((x) => {
-      items.push(x);
+      items.push(<string>x);
     });
 
-    const writer = factory.createWriter(writerConfig);
+    const writer = factory.createWriter({
+      config: writerConfig,
+      ty: conn.Conn.FileWriterChannel,
+    });
     await factory.init();
     await writer.push("Number 1 " + Math.random());
 

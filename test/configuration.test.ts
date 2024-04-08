@@ -3,7 +3,7 @@ import { Quad } from "@rdfjs/types";
 import { RDF } from "@treecg/types";
 import { readFileSync } from "fs";
 import { DataFactory, Parser } from "n3";
-import { extractShapes } from "../src/shacl";
+import { extractShapes } from "rdf-lens";
 
 function parseQuads(inp: string): Quad[] {
   return new Parser().parse(inp);
@@ -19,7 +19,7 @@ const JsProcessor = DataFactory.namedNode("https://w3id.org/conn/js#JsProcess");
 describe("Input test", () => {
   test("Parse configuration", () => {
     const output = parseConfig();
-    expect(output.shapes.length).toBe(6);
+    expect(output.shapes.length).toBe(8);
     expect(output.lenses[JsProcessor.value]).toBeDefined();
   });
 
@@ -61,7 +61,7 @@ describe("Input test", () => {
       .map((x) => x.subject);
     const processorLens = config.lenses[JsProcessor.value];
     const processors = subjects.map((id) =>
-      processorLens.execute({ id, quads }),
+      processorLens.execute({ id, quads: quads }),
     );
 
     const found: any[] = [];
@@ -78,7 +78,9 @@ describe("Input test", () => {
       );
       const processorLens = config.lenses[proc.ty.value];
 
-      found.push(...subjects.map((id) => processorLens.execute({ id, quads })));
+      found.push(
+        ...subjects.map((id) => processorLens.execute({ id, quads: quads })),
+      );
     }
 
     console.log(

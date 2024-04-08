@@ -8,6 +8,7 @@ const prefixes = `
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfl: <https://w3id.org/rdf-lens/ontology#>.
 `;
 
 const JS = "https://w3id.org/conn/js#";
@@ -47,8 +48,8 @@ describe("test existing processors", () => {
 
     const [[arg]] = argss;
     expect(arg).toBeInstanceOf(Object);
-    expect(arg.channel).toBeDefined();
-    expect(arg.channel.id).toBeDefined();
+    expect(arg.config.channel).toBeDefined();
+    expect(arg.config.channel.id).toBeDefined();
     expect(arg.ty).toBeDefined();
   });
 
@@ -90,8 +91,8 @@ describe("test existing processors", () => {
     const [[msg, writer]] = argss;
     expect(msg).toBe("Hello world!");
     expect(writer).toBeInstanceOf(Object);
-    expect(writer.channel).toBeDefined();
-    expect(writer.channel.id).toBeDefined();
+    expect(writer.config.channel).toBeDefined();
+    expect(writer.config.channel.id).toBeDefined();
     expect(writer.ty).toBeDefined();
   });
 
@@ -106,9 +107,9 @@ describe("test existing processors", () => {
 <jw> a js:JsWriterChannel.
 [ ] a js:Send;
   js:msg [
-    a :EnvVariable;
-    :envDefault "FromEnv";
-    :envKey "msg"
+    a rdfl:EnvVariable;
+    rdfl:envDefault "FromEnv";
+    rdfl:envKey "msg"
   ];
   js:sendWriter <jw>.
 `;
@@ -138,8 +139,8 @@ describe("test existing processors", () => {
       const [[msg, writer]] = argss;
       expect(msg).toBe("FromEnv");
       expect(writer).toBeInstanceOf(Object);
-      expect(writer.channel).toBeDefined();
-      expect(writer.channel.id).toBeDefined();
+      expect(writer.config.channel).toBeDefined();
+      expect(writer.config.channel.id).toBeDefined();
       expect(writer.ty).toBeDefined();
     });
 
@@ -155,8 +156,8 @@ describe("test existing processors", () => {
       const [[msg, writer]] = argss;
       expect(msg).toBe("FROM ENV");
       expect(writer).toBeInstanceOf(Object);
-      expect(writer.channel).toBeDefined();
-      expect(writer.channel.id).toBeDefined();
+      expect(writer.config.channel).toBeDefined();
+      expect(writer.config.channel.id).toBeDefined();
       expect(writer.ty).toBeDefined();
     });
   });
@@ -168,8 +169,10 @@ describe("test existing processors", () => {
 [ ] a :Channel;
   :reader <jr>;
   :writer <jw>.
+
 <jr> a js:JsReaderChannel.
 <jw> a js:JsWriterChannel.
+
 [ ] a js:Echo;
   js:input <jr>;
   js:output <jw>.
@@ -194,16 +197,20 @@ describe("test existing processors", () => {
     const argss = extractSteps(proc!, quads, config);
     expect(argss.length).toBe(1);
     expect(argss[0].length).toBe(2);
+    console.log(argss);
+
     const [[reader, writer]] = argss;
+    console.log(reader.ty.value);
+    console.log(writer.ty.value);
 
     expect(reader).toBeInstanceOf(Object);
-    expect(reader.channel).toBeDefined();
-    expect(reader.channel.id).toBeDefined();
+    expect(reader.config.channel).toBeDefined();
+    expect(reader.config.channel.id).toBeDefined();
     expect(reader.ty).toBeDefined();
 
     expect(writer).toBeInstanceOf(Object);
-    expect(writer.channel).toBeDefined();
-    expect(writer.channel.id).toBeDefined();
+    expect(writer.config.channel).toBeDefined();
+    expect(writer.config.channel.id).toBeDefined();
     expect(writer.ty).toBeDefined();
   });
 });

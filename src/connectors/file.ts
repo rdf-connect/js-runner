@@ -3,7 +3,6 @@ import { appendFile, readFile, stat, writeFile } from "fs/promises";
 import { isAbsolute } from "path";
 import { watch } from "node:fs";
 import {
-  Config,
   ReaderConstructor,
   SimpleStream,
   WriterConstructor,
@@ -13,14 +12,14 @@ interface FileError extends Error {
   code: string;
 }
 
-export interface FileReaderConfig extends Config {
+export interface FileReaderConfig {
   path: string;
   onReplace: boolean;
   readFirstContent?: boolean;
   encoding?: string;
 }
 
-export interface FileWriterConfig extends Config {
+export interface FileWriterConfig {
   path: string;
   onReplace: boolean;
   readFirstContent?: boolean;
@@ -99,7 +98,6 @@ export const startFileStreamReader: ReaderConstructor<FileReaderConfig> = (
     );
 
     if (config.onReplace && config.readFirstContent) {
-      console.log("reading first content");
       const content = await readFile(path, { encoding });
       await reader.push(content);
     }

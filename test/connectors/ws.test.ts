@@ -5,19 +5,23 @@ import { WsReaderConfig, WsWriterConfig } from "../../src/connectors/ws";
 describe("connector-ws", () => {
   test("Should write -> WebSocket -> read", async () => {
     const readerConfig: WsReaderConfig = {
-      ty: conn.Conn.WsReaderChannel,
       host: "0.0.0.0",
       port: 8123,
     };
 
     const writerConfig: WsWriterConfig = {
-      ty: conn.Conn.WsWriterChannel,
       url: "ws://127.0.0.1:8123",
     };
 
     const factory = new conn.ChannelFactory();
-    const reader = factory.createReader(readerConfig);
-    const writer = factory.createWriter(writerConfig);
+    const reader = factory.createReader({
+      config: readerConfig,
+      ty: conn.Conn.WsReaderChannel,
+    });
+    const writer = factory.createWriter({
+      config: writerConfig,
+      ty: conn.Conn.WsWriterChannel,
+    });
     const items: unknown[] = [];
     reader.data((x) => {
       items.push(x);

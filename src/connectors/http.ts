@@ -31,7 +31,7 @@ function streamToString(
   });
 }
 
-export interface HttpReaderConfig extends Config {
+export interface HttpReaderConfig {
   endpoint: string;
   port: number;
   binary: boolean;
@@ -92,7 +92,7 @@ export const startHttpStreamReader: ReaderConstructor<HttpReaderConfig> = (
   return { reader: stream, init };
 };
 
-export interface HttpWriterConfig extends Config {
+export interface HttpWriterConfig {
   endpoint: string;
   method: string;
 }

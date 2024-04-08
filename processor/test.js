@@ -11,10 +11,12 @@ function streamToString(ev) {
 export async function send(msg, writer) {
   const host = "0.0.0.0";
   const port = 8000;
-  const requestListener = function (req, res) {
-    streamToString(req).then((st) => writer.push(st.toString()));
+  const requestListener = async function (req, res) {
+    const data = await streamToString(req);
+    const ret = `${msg} ${data}`;
+    await writer.push(ret);
     res.writeHead(200);
-    res.end(msg);
+    res.end(ret);
   };
   const server = http.createServer(requestListener);
 

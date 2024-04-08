@@ -8,17 +8,21 @@ describe("connector-http", () => {
       endpoint: "localhost",
       port: 8080,
       binary: false,
-      ty: conn.Conn.HttpReaderChannel,
     };
     const writerConfig: HttpWriterConfig = {
       endpoint: "http://localhost:8080",
       method: "POST",
-      ty: conn.Conn.HttpWriterChannel,
     };
 
     const factory = new conn.ChannelFactory();
-    const reader = factory.createReader(readerConfig);
-    const writer = factory.createWriter(writerConfig);
+    const reader = factory.createReader({
+      config: readerConfig,
+      ty: conn.Conn.HttpReaderChannel,
+    });
+    const writer = factory.createWriter({
+      config: writerConfig,
+      ty: conn.Conn.HttpWriterChannel,
+    });
 
     reader.data((data) => {
       items.push(data);
@@ -44,17 +48,21 @@ describe("connector-http", () => {
       port: 8081,
       binary: true,
       waitHandled: false,
-      ty: conn.Conn.HttpReaderChannel,
     };
     const writerConfig: HttpWriterConfig = {
       endpoint: "http://localhost:8081",
       method: "POST",
-      ty: conn.Conn.HttpWriterChannel,
     };
 
     const factory = new conn.ChannelFactory();
-    const reader = factory.createReader(readerConfig);
-    const writer = factory.createWriter(writerConfig);
+    const reader = factory.createReader({
+      config: readerConfig,
+      ty: conn.Conn.HttpReaderChannel,
+    });
+    const writer = factory.createWriter({
+      config: writerConfig,
+      ty: conn.Conn.HttpWriterChannel,
+    });
 
     reader.data((data) => {
       console.log("This reader works");
@@ -82,17 +90,21 @@ describe("connector-http", () => {
       port: 8082,
       binary: true,
       waitHandled: true,
-      ty: conn.Conn.HttpReaderChannel,
     };
     const writerConfig: HttpWriterConfig = {
       endpoint: "http://localhost:8082",
       method: "POST",
-      ty: conn.Conn.HttpWriterChannel,
     };
 
     const factory = new conn.ChannelFactory();
-    const reader = factory.createReader(readerConfig);
-    const writer = factory.createWriter(writerConfig);
+    const reader = factory.createReader({
+      config: readerConfig,
+      ty: conn.Conn.HttpReaderChannel,
+    });
+    const writer = factory.createWriter({
+      config: writerConfig,
+      ty: conn.Conn.HttpWriterChannel,
+    });
 
     reader.data(async (data) => {
       expect(Buffer.isBuffer(data)).toBeTruthy();
@@ -121,11 +133,13 @@ describe("connector-http", () => {
       port: 8083,
       binary: false,
       responseCode: 202,
-      ty: conn.Conn.HttpReaderChannel,
     };
 
     const factory = new conn.ChannelFactory();
-    const reader = factory.createReader(readerConfig);
+    const reader = factory.createReader({
+      config: readerConfig,
+      ty: conn.Conn.HttpReaderChannel,
+    });
 
     reader.data((data) => {
       items.push(data);
