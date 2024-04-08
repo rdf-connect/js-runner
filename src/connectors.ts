@@ -29,6 +29,7 @@ import {
   startHttpStreamReader,
   startHttpStreamWriter,
 } from "./connectors/http";
+import { LOG } from "./util";
 export * from "./connectors/http";
 
 export const Conn = createTermNamespace(
@@ -46,6 +47,7 @@ export const Conn = createTermNamespace(
 );
 
 export interface Config<T> {
+  id: Term;
   ty: NamedNode;
   config: T;
 }
@@ -79,6 +81,7 @@ export class ChannelFactory {
   private jsChannelsBlankNodes: { [label: string]: SimpleStream<string> } = {};
 
   createReader(config: Config<any>): Stream<string | Buffer> {
+    LOG.channel("Creating reader %s: a %s", config.id.value, config.ty.value);
     if (config.ty.equals(Conn.FileReaderChannel)) {
       const { reader, init } = startFileStreamReader(config.config);
       this.inits.push(init);
@@ -135,6 +138,7 @@ export class ChannelFactory {
   }
 
   createWriter(config: Config<any>): Writer<string | Buffer> {
+    LOG.channel("Creating writer %s: a %s", config.id.value, config.ty.value);
     if (config.ty.equals(Conn.FileWriterChannel)) {
       const { writer, init } = startFileStreamWriter(
         <FileWriterConfig>config.config,

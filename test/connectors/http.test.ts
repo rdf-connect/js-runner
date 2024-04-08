@@ -1,6 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 import * as conn from "../../src/connectors";
 import { HttpReaderConfig, HttpWriterConfig } from "../../src/connectors/http";
+import { namedNode } from "../../src/util";
 
 describe("connector-http", () => {
   test("Should write -> HTTP -> read (string)", async () => {
@@ -17,10 +18,12 @@ describe("connector-http", () => {
     const factory = new conn.ChannelFactory();
     const reader = factory.createReader({
       config: readerConfig,
+      id: namedNode("reader"),
       ty: conn.Conn.HttpReaderChannel,
     });
     const writer = factory.createWriter({
       config: writerConfig,
+      id: namedNode("writer"),
       ty: conn.Conn.HttpWriterChannel,
     });
 
@@ -57,10 +60,12 @@ describe("connector-http", () => {
     const factory = new conn.ChannelFactory();
     const reader = factory.createReader({
       config: readerConfig,
+      id: namedNode("reader"),
       ty: conn.Conn.HttpReaderChannel,
     });
     const writer = factory.createWriter({
       config: writerConfig,
+      id: namedNode("writer"),
       ty: conn.Conn.HttpWriterChannel,
     });
 
@@ -98,10 +103,12 @@ describe("connector-http", () => {
     const factory = new conn.ChannelFactory();
     const reader = factory.createReader({
       config: readerConfig,
+      id: namedNode("reader"),
       ty: conn.Conn.HttpReaderChannel,
     });
     const writer = factory.createWriter({
       config: writerConfig,
+      id: namedNode("writer"),
       ty: conn.Conn.HttpWriterChannel,
     });
 
@@ -137,6 +144,7 @@ describe("connector-http", () => {
     const factory = new conn.ChannelFactory();
     const reader = factory.createReader({
       config: readerConfig,
+      id: namedNode("reader"),
       ty: conn.Conn.HttpReaderChannel,
     });
 

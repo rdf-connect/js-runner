@@ -1,6 +1,6 @@
 import { Store } from "n3";
 import { getArgs } from "./args";
-import { load_store } from "./util";
+import { load_store, LOG } from "./util";
 
 export * from "./connectors";
 
@@ -111,6 +111,8 @@ export async function jsRunner() {
     quads,
     shapes: config,
   } = await extractProcessors(source, apply);
+
+  LOG.main("Found %d processors", processors.length);
 
   const starts = [];
   for (let proc of processors) {

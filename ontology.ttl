@@ -32,6 +32,12 @@
 [ ] a sh:NodeShape;
   sh:targetClass :ReaderChannel;
   sh:property [
+    sh:path ( );
+    sh:name "id";
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:datatype xsd:iri;
+  ], [
     sh:path rdf:type;
     sh:name "ty";
     sh:maxCount 1;
@@ -47,6 +53,12 @@
 [ ] a sh:NodeShape;
   sh:targetClass :WriterChannel;
   sh:property [
+    sh:path ( );
+    sh:name "id";
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:datatype xsd:iri;
+  ], [
     sh:path rdf:type;
     sh:name "ty";
     sh:maxCount 1;
