@@ -65,7 +65,6 @@ describe("connector-http", () => {
     });
 
     reader.data((data) => {
-      console.log("This reader works");
       expect(Buffer.isBuffer(data)).toBeTruthy();
       items.push(data.toString());
     });

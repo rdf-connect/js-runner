@@ -71,22 +71,11 @@ describe("Input test", () => {
           (x) => x.predicate.equals(RDF.terms.type) && x.object.equals(proc.ty),
         )
         .map((x) => x.subject);
-      console.log(
-        "checking proc",
-        proc.ty.value,
-        subjects.map((x) => x.value),
-      );
       const processorLens = config.lenses[proc.ty.value];
 
       found.push(
         ...subjects.map((id) => processorLens.execute({ id, quads: quads })),
       );
     }
-
-    console.log(
-      config.shapes.map((x) => x.ty.value),
-      processors,
-    );
-    console.log(found);
   });
 });

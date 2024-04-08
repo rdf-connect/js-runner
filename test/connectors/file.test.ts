@@ -40,7 +40,6 @@ describe("File Channel", () => {
 
     await sleep(300);
     expect(items.length).toBe(1);
-    console.log(items);
     expect(items[0].startsWith("Number 1")).toBeTruthy();
 
     await writer.push("Number 2");

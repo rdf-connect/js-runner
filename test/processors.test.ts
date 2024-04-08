@@ -25,7 +25,6 @@ describe("test existing processors", () => {
   js:rescReader <jr>.
 `;
     const baseIRI = process.cwd() + "/config.ttl";
-    console.log(baseIRI);
 
     const source: Source = {
       value,
@@ -67,7 +66,6 @@ describe("test existing processors", () => {
   js:sendWriter <jw>.
 `;
     const baseIRI = process.cwd() + "/config.ttl";
-    console.log(baseIRI);
 
     const source: Source = {
       value,
@@ -114,7 +112,6 @@ describe("test existing processors", () => {
   js:sendWriter <jw>.
 `;
     const baseIRI = process.cwd() + "/config.ttl";
-    console.log(baseIRI);
 
     const source: Source = {
       value,
@@ -178,7 +175,6 @@ describe("test existing processors", () => {
   js:output <jw>.
 `;
     const baseIRI = process.cwd() + "/config.ttl";
-    console.log(baseIRI);
 
     const source: Source = {
       value,
@@ -197,11 +193,8 @@ describe("test existing processors", () => {
     const argss = extractSteps(proc!, quads, config);
     expect(argss.length).toBe(1);
     expect(argss[0].length).toBe(2);
-    console.log(argss);
 
     const [[reader, writer]] = argss;
-    console.log(reader.ty.value);
-    console.log(writer.ty.value);
 
     expect(reader).toBeInstanceOf(Object);
     expect(reader.config.channel).toBeDefined();
