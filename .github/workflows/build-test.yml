@@ -20,3 +20,4 @@ jobs:
 
         - run: bun i # Install dependencies
         - run: bun test # Run tests
+

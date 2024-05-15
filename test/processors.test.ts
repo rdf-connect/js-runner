@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import { extractProcessors, extractSteps, Source } from "../src/index";
 const prefixes = `
 @prefix js: <https://w3id.org/conn/js#>.
@@ -13,8 +13,8 @@ const prefixes = `
 
 const JS = "https://w3id.org/conn/js#";
 describe("test existing processors", () => {
-  test("resc.ttl", async () => {
-    const value = `${prefixes}
+    test("resc.ttl", async () => {
+        const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/resc.ttl>.
 
 [ ] a :Channel;
@@ -24,36 +24,36 @@ describe("test existing processors", () => {
 [ ] a js:Resc;
   js:rescReader <jr>.
 `;
-    const baseIRI = process.cwd() + "/config.ttl";
+        const baseIRI = process.cwd() + "/config.ttl";
 
-    const source: Source = {
-      value,
-      baseIRI,
-      type: "memory",
-    };
+        const source: Source = {
+            value,
+            baseIRI,
+            type: "memory",
+        };
 
-    const {
-      processors,
-      quads,
-      shapes: config,
-    } = await extractProcessors(source);
+        const {
+            processors,
+            quads,
+            shapes: config,
+        } = await extractProcessors(source);
 
-    const proc = processors.find((x) => x.ty.value === JS + "Resc");
-    expect(proc).toBeDefined();
+        const proc = processors.find((x) => x.ty.value === JS + "Resc");
+        expect(proc).toBeDefined();
 
-    const argss = extractSteps(proc!, quads, config);
-    expect(argss.length).toBe(1);
-    expect(argss[0].length).toBe(1);
+        const argss = extractSteps(proc!, quads, config);
+        expect(argss.length).toBe(1);
+        expect(argss[0].length).toBe(1);
 
-    const [[arg]] = argss;
-    expect(arg).toBeInstanceOf(Object);
-    expect(arg.config.channel).toBeDefined();
-    expect(arg.config.channel.id).toBeDefined();
-    expect(arg.ty).toBeDefined();
-  });
+        const [[arg]] = argss;
+        expect(arg).toBeInstanceOf(Object);
+        expect(arg.config.channel).toBeDefined();
+        expect(arg.config.channel.id).toBeDefined();
+        expect(arg.ty).toBeDefined();
+    });
 
-  test("send.ttl", async () => {
-    const value = `${prefixes}
+    test("send.ttl", async () => {
+        const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/send.ttl> .
 
 [ ] a :Channel;
@@ -65,37 +65,37 @@ describe("test existing processors", () => {
   js:msg "Hello world!";
   js:sendWriter <jw>.
 `;
-    const baseIRI = process.cwd() + "/config.ttl";
+        const baseIRI = process.cwd() + "/config.ttl";
 
-    const source: Source = {
-      value,
-      baseIRI,
-      type: "memory",
-    };
+        const source: Source = {
+            value,
+            baseIRI,
+            type: "memory",
+        };
 
-    const {
-      processors,
-      quads,
-      shapes: config,
-    } = await extractProcessors(source);
+        const {
+            processors,
+            quads,
+            shapes: config,
+        } = await extractProcessors(source);
 
-    const proc = processors.find((x) => x.ty.value === JS + "Send");
-    expect(proc).toBeDefined();
+        const proc = processors.find((x) => x.ty.value === JS + "Send");
+        expect(proc).toBeDefined();
 
-    const argss = extractSteps(proc!, quads, config);
-    expect(argss.length).toBe(1);
-    expect(argss[0].length).toBe(2);
+        const argss = extractSteps(proc!, quads, config);
+        expect(argss.length).toBe(1);
+        expect(argss[0].length).toBe(2);
 
-    const [[msg, writer]] = argss;
-    expect(msg).toBe("Hello world!");
-    expect(writer).toBeInstanceOf(Object);
-    expect(writer.config.channel).toBeDefined();
-    expect(writer.config.channel.id).toBeDefined();
-    expect(writer.ty).toBeDefined();
-  });
+        const [[msg, writer]] = argss;
+        expect(msg).toBe("Hello world!");
+        expect(writer).toBeInstanceOf(Object);
+        expect(writer.config.channel).toBeDefined();
+        expect(writer.config.channel.id).toBeDefined();
+        expect(writer.ty).toBeDefined();
+    });
 
-  describe("send.ttl from env", async () => {
-    const value = `${prefixes}
+    describe("send.ttl from env", async () => {
+        const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/send.ttl> .
 
 [ ] a :Channel;
@@ -111,56 +111,56 @@ describe("test existing processors", () => {
   ];
   js:sendWriter <jw>.
 `;
-    const baseIRI = process.cwd() + "/config.ttl";
+        const baseIRI = process.cwd() + "/config.ttl";
 
-    const source: Source = {
-      value,
-      baseIRI,
-      type: "memory",
-    };
+        const source: Source = {
+            value,
+            baseIRI,
+            type: "memory",
+        };
 
-    const {
-      processors,
-      quads,
-      shapes: config,
-    } = await extractProcessors(source);
+        const {
+            processors,
+            quads,
+            shapes: config,
+        } = await extractProcessors(source);
 
-    test("Env default value", () => {
-      const proc = processors.find((x) => x.ty.value === JS + "Send");
-      expect(proc).toBeDefined();
+        test("Env default value", () => {
+            const proc = processors.find((x) => x.ty.value === JS + "Send");
+            expect(proc).toBeDefined();
 
-      const argss = extractSteps(proc!, quads, config);
-      expect(argss.length).toBe(1);
-      expect(argss[0].length).toBe(2);
+            const argss = extractSteps(proc!, quads, config);
+            expect(argss.length).toBe(1);
+            expect(argss[0].length).toBe(2);
 
-      const [[msg, writer]] = argss;
-      expect(msg).toBe("FromEnv");
-      expect(writer).toBeInstanceOf(Object);
-      expect(writer.config.channel).toBeDefined();
-      expect(writer.config.channel.id).toBeDefined();
-      expect(writer.ty).toBeDefined();
+            const [[msg, writer]] = argss;
+            expect(msg).toBe("FromEnv");
+            expect(writer).toBeInstanceOf(Object);
+            expect(writer.config.channel).toBeDefined();
+            expect(writer.config.channel.id).toBeDefined();
+            expect(writer.ty).toBeDefined();
+        });
+
+        test("Env value", () => {
+            process.env["msg"] = "FROM ENV";
+            const proc = processors.find((x) => x.ty.value === JS + "Send");
+            expect(proc).toBeDefined();
+
+            const argss = extractSteps(proc!, quads, config);
+            expect(argss.length).toBe(1);
+            expect(argss[0].length).toBe(2);
+
+            const [[msg, writer]] = argss;
+            expect(msg).toBe("FROM ENV");
+            expect(writer).toBeInstanceOf(Object);
+            expect(writer.config.channel).toBeDefined();
+            expect(writer.config.channel.id).toBeDefined();
+            expect(writer.ty).toBeDefined();
+        });
     });
 
-    test("Env value", () => {
-      process.env["msg"] = "FROM ENV";
-      const proc = processors.find((x) => x.ty.value === JS + "Send");
-      expect(proc).toBeDefined();
-
-      const argss = extractSteps(proc!, quads, config);
-      expect(argss.length).toBe(1);
-      expect(argss[0].length).toBe(2);
-
-      const [[msg, writer]] = argss;
-      expect(msg).toBe("FROM ENV");
-      expect(writer).toBeInstanceOf(Object);
-      expect(writer.config.channel).toBeDefined();
-      expect(writer.config.channel.id).toBeDefined();
-      expect(writer.ty).toBeDefined();
-    });
-  });
-
-  test("echo.ttl", async () => {
-    const value = `${prefixes}
+    test("echo.ttl", async () => {
+        const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/echo.ttl> .
 
 [ ] a :Channel;
@@ -174,36 +174,36 @@ describe("test existing processors", () => {
   js:input <jr>;
   js:output <jw>.
 `;
-    const baseIRI = process.cwd() + "/config.ttl";
+        const baseIRI = process.cwd() + "/config.ttl";
 
-    const source: Source = {
-      value,
-      baseIRI,
-      type: "memory",
-    };
+        const source: Source = {
+            value,
+            baseIRI,
+            type: "memory",
+        };
 
-    const {
-      processors,
-      quads,
-      shapes: config,
-    } = await extractProcessors(source);
+        const {
+            processors,
+            quads,
+            shapes: config,
+        } = await extractProcessors(source);
 
-    const proc = processors.find((x) => x.ty.value === JS + "Echo");
-    expect(proc).toBeDefined();
-    const argss = extractSteps(proc!, quads, config);
-    expect(argss.length).toBe(1);
-    expect(argss[0].length).toBe(2);
+        const proc = processors.find((x) => x.ty.value === JS + "Echo");
+        expect(proc).toBeDefined();
+        const argss = extractSteps(proc!, quads, config);
+        expect(argss.length).toBe(1);
+        expect(argss[0].length).toBe(2);
 
-    const [[reader, writer]] = argss;
+        const [[reader, writer]] = argss;
 
-    expect(reader).toBeInstanceOf(Object);
-    expect(reader.config.channel).toBeDefined();
-    expect(reader.config.channel.id).toBeDefined();
-    expect(reader.ty).toBeDefined();
+        expect(reader).toBeInstanceOf(Object);
+        expect(reader.config.channel).toBeDefined();
+        expect(reader.config.channel.id).toBeDefined();
+        expect(reader.ty).toBeDefined();
 
-    expect(writer).toBeInstanceOf(Object);
-    expect(writer.config.channel).toBeDefined();
-    expect(writer.config.channel.id).toBeDefined();
-    expect(writer.ty).toBeDefined();
-  });
+        expect(writer).toBeInstanceOf(Object);
+        expect(writer.config.channel).toBeDefined();
+        expect(writer.config.channel.id).toBeDefined();
+        expect(writer.ty).toBeDefined();
+    });
 });

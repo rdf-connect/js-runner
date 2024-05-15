@@ -19,10 +19,11 @@
     "js-runner": "bin/bundle.mjs"
   },
   "scripts": {
-    "build": "tsc && rollup ./dist/index.js --file ./dist/index.cjs --format cjs && bun build --external debug ./bin/js-runner.js --outfile bin/bundle.mjs --target node && npm run build:recompose",
+    "build": "tsc && tsc-alias && rollup ./dist/index.js --file ./dist/index.cjs --format cjs && bun build --external debug ./bin/js-runner.js --outfile bin/bundle.mjs --target node && npm run build:recompose",
     "build:recompose": "sed -z 's/var __require = (id) => {\\n  return import.meta.require(id);\\n};/import Module from \"node:module\";\\nconst __require = Module.createRequire(import.meta.url);/' -i bin/bundle.mjs",
     "watch": "tsc -w",
-    "test": "bun test"
+    "test": "vitest run --coverage --coverage.include src",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
@@ -35,7 +36,7 @@
     "debug": "^4.3.4",
     "kafkajs": "^2.2.4",
     "n3": "^1.17.1",
-    "rdf-lens": "^1.2.6",
+    "rdf-lens": "^1.2.8",
     "stream-to-array": "^2.3.0",
     "ws": "^8.14.2"
   },
@@ -49,6 +50,19 @@
     "@types/node": "^18.11.15",
     "@types/ws": "^8.5.8",
     "rollup": "^4.12.0",
-    "typescript": "^5.2.2"
+    "@typescript-eslint/eslint-plugin": "^7.5.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "@vitest/coverage-v8": "^1.4.0",
+    "dotenv": "^16.4.5",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.8",
+    "typescript": "^5.4.3",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.4.0"
   }
 }

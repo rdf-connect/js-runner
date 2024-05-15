@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 
 const prefixes = `
 @prefix js: <https://w3id.org/conn/js#> .
@@ -10,8 +10,8 @@ const prefixes = `
 `;
 
 describe("Processor Lens", () => {
-  test("Parse full config", () => {
-    const turtle = `
+    test("Parse full config", () => {
+        const turtle = `
 ${prefixes}
 
 js:Echo a js:JsProcess;
@@ -43,19 +43,19 @@ js:Echo a js:JsProcess;
     sh:name "Output Channel"
   ].
 `;
-    // const quads = new Parser().parse(turtle);
-    //
-    // const lens = subjects().then(unique()).asMulti().thenSome(ProcessorLens)
-    // const out = lens.execute(quads);
-    //
-    // expect(out.length).toBe(1);
-    // expect(out[0].id).toEqual("https://w3id.org/conn/js#Echo");
-    // expect(out[0].mappings.length).toBe(2);
-    // expect(out[0].shape).toBeInstanceOf(BasicLens);
-  });
+        // const quads = new Parser().parse(turtle);
+        //
+        // const lens = subjects().then(unique()).asMulti().thenSome(ProcessorLens)
+        // const out = lens.execute(quads);
+        //
+        // expect(out.length).toBe(1);
+        // expect(out[0].id).toEqual("https://w3id.org/conn/js#Echo");
+        // expect(out[0].mappings.length).toBe(2);
+        // expect(out[0].shape).toBeInstanceOf(BasicLens);
+    });
 
-  test("2 + 2 = 4", () => {
-    const four = 2 + 2;
-    expect(four).toBe(4);
-  });
+    test("2 + 2 = 4", () => {
+        const four = 2 + 2;
+        expect(four).toBe(4);
+    });
 });
