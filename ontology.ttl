@@ -7,6 +7,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 @prefix dc: <http://purl.org/dc/terms/>.
+@prefix rdfl: <https://w3id.org/rdf-lens/ontology#>.
 
 [ ] a sh:NodeShape;
   sh:targetClass :Channel;
@@ -14,6 +15,7 @@
     sh:path ( );
     sh:name "id";
     sh:maxCount 1;
+    sh:minCount 1;
     sh:datatype xsd:iri;
   ], [
     sh:path :reader;
@@ -30,34 +32,68 @@
 [ ] a sh:NodeShape;
   sh:targetClass :ReaderChannel;
   sh:property [
-    sh:path [ sh:inversePath :reader ];
-    sh:name "channel";
+    sh:path ( );
+    sh:name "id";
     sh:maxCount 1;
-    sh:class :Channel;
+    sh:minCount 1;
+    sh:datatype xsd:iri;
   ], [
     sh:path rdf:type;
     sh:name "ty";
     sh:maxCount 1;
     sh:datatype xsd:iri;
+  ], [
+    sh:path ( );
+    sh:name "config";
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:class rdfl:TypedExtract;
   ].
 
 [ ] a sh:NodeShape;
   sh:targetClass :WriterChannel;
   sh:property [
-    sh:path [ sh:inversePath :writer ];
-    sh:name "channel";
+    sh:path ( );
+    sh:name "id";
     sh:maxCount 1;
-    sh:class :Channel;
+    sh:minCount 1;
+    sh:datatype xsd:iri;
   ], [
     sh:path rdf:type;
     sh:name "ty";
     sh:maxCount 1;
+    sh:minCount 1;
     sh:datatype xsd:iri;
+  ], [
+    sh:path ( );
+    sh:name "config";
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:class rdfl:TypedExtract;
   ].
 
 js:JsChannel rdfs:subClassOf :Channel.
 js:JsReaderChannel rdfs:subClassOf :ReaderChannel.
+[ ] a sh:NodeShape;
+  sh:targetClass js:JsReaderChannel;
+  sh:property [
+    sh:path [ sh:inversePath :reader ];
+    sh:name "channel";
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:class :Channel;
+  ].
+
 js:JsWriterChannel rdfs:subClassOf :WriterChannel.
+[ ] a sh:NodeShape;
+  sh:targetClass js:JsWriterChannel;
+  sh:property [
+    sh:path [ sh:inversePath :writer ];
+    sh:name "channel";
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:class :Channel;
+  ].
 
 #
 js:JsChannel a :Channel;

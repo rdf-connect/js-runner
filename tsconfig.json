@@ -1,21 +1,38 @@
 {
   "compilerOptions": {
-    // Generate d.ts files
     "declaration": true,
+    "outDir": "dist/",
+    "lib": [
+      "ES2022"
+    ],
+    "target": "ES2022",
+    "module": "ES2022",
     "moduleResolution": "node",
-    "target": "esnext",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
-    /* Modules */
-    "module": "esnext",                                /* Specify what module code is generated. */
-    "outDir": "./dist",                                  /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
-    "rootDir": "./src",                                   /* Specify an output folder for all emitted files. */
-    "sourceMap": true,
-    "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
-    "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
-    // "emitDeclarationOnly": true,
-    "strict": true                                      /* Enable all strict type-checking options. */
+    "preserveConstEnums": true,
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "removeComments": true
   },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "tsc-alias": {
+    "resolveFullPaths": true,
+    "verbose": false
+  },
+  "include": [
+    "src/**/*"
+  ],
   "exclude": [
-    "test/**/*.ts",
+    "node_modules/**/*",
     "dist/**/*"
   ]
 }

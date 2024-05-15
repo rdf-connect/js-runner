@@ -7,6 +7,16 @@ import { createUriAndTermNamespace } from "@treecg/types";
 import { Source } from ".";
 import { Quad, Term } from "@rdfjs/types";
 
+import debug from "debug";
+
+export const LOG = (function () {
+  const main = debug("js-runner");
+  const channel = main.extend("channel");
+  const util = main.extend("util");
+
+  return { main, channel, util };
+})();
+
 export function toArray<T>(stream: stream.Readable): Promise<T[]> {
   const output: T[] = [];
   return new Promise((res, rej) => {
@@ -56,7 +66,7 @@ async function get_readstream(location: string): Promise<stream.Readable> {
 
 export async function load_quads(location: string, baseIRI?: string) {
   try {
-    console.log("load_quads", location, baseIRI);
+    LOG.util("Loading quads %s", location);
     const parser = new StreamParser({ baseIRI: baseIRI || location });
     const rdfStream = await get_readstream(location);
     rdfStream.pipe(parser);

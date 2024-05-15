@@ -2,7 +2,6 @@ import { createTermNamespace } from "@treecg/types";
 
 import { NamedNode, Term } from "@rdfjs/types";
 import {
-  FileReaderConfig,
   FileWriterConfig,
   startFileStreamReader,
   startFileStreamWriter,
@@ -12,7 +11,6 @@ export * from "./connectors/file";
 import {
   startWsStreamReader,
   startWsStreamWriter,
-  WsReaderConfig,
   WsWriterConfig,
 } from "./connectors/ws";
 export * from "./connectors/ws";
@@ -31,6 +29,7 @@ import {
   startHttpStreamReader,
   startHttpStreamWriter,
 } from "./connectors/http";
+import { LOG } from "./util";
 export * from "./connectors/http";
 
 export const Conn = createTermNamespace(
@@ -43,18 +42,22 @@ export const Conn = createTermNamespace(
   "KafkaWriterChannel",
   "WsReaderChannel",
   "WsWriterChannel",
+  "WriterChannel",
+  "ReaderChannel",
 );
 
-export interface Config {
+export interface Config<T> {
+  id: Term;
   ty: NamedNode;
+  config: T;
 }
 
-export type ReaderConstructor<C extends Config> = (config: C) => {
+export type ReaderConstructor<C> = (config: C) => {
   reader: Stream<string | Buffer>;
   init: () => Promise<void>;
 };
 
-export type WriterConstructor<C extends Config> = (config: C) => {
+export type WriterConstructor<C> = (config: C) => {
   writer: Writer<string | Buffer>;
   init: () => Promise<void>;
 };
@@ -67,7 +70,7 @@ export const JsOntology = createTermNamespace(
   "JsWriterChannel",
 );
 type JsChannel = {
-  channel?: {
+  channel: {
     id: Term;
   };
 };
@@ -77,16 +80,17 @@ export class ChannelFactory {
   private jsChannelsNamedNodes: { [label: string]: SimpleStream<string> } = {};
   private jsChannelsBlankNodes: { [label: string]: SimpleStream<string> } = {};
 
-  createReader(config: Config): Stream<string | Buffer> {
+  createReader(config: Config<any>): Stream<string | Buffer> {
+    LOG.channel("Creating reader %s: a %s", config.id.value, config.ty.value);
     if (config.ty.equals(Conn.FileReaderChannel)) {
-      const { reader, init } = startFileStreamReader(<FileReaderConfig>config);
+      const { reader, init } = startFileStreamReader(config.config);
       this.inits.push(init);
 
       return reader;
     }
 
     if (config.ty.equals(Conn.WsReaderChannel)) {
-      const { reader, init } = startWsStreamReader(<WsReaderConfig>config);
+      const { reader, init } = startWsStreamReader(config.config);
       this.inits.push(init);
 
       return reader;
@@ -94,20 +98,22 @@ export class ChannelFactory {
 
     if (config.ty.equals(Conn.KafkaReaderChannel)) {
       const { reader, init } = startKafkaStreamReader(
-        <KafkaReaderConfig>config,
+        <KafkaReaderConfig>config.config,
       );
       this.inits.push(init);
       return reader;
     }
 
     if (config.ty.equals(Conn.HttpReaderChannel)) {
-      const { reader, init } = startHttpStreamReader(<HttpReaderConfig>config);
+      const { reader, init } = startHttpStreamReader(
+        <HttpReaderConfig>config.config,
+      );
       this.inits.push(init);
       return reader;
     }
 
     if (config.ty.equals(JsOntology.JsReaderChannel)) {
-      const c = <JsChannel>config;
+      const c = <JsChannel>config.config;
       if (c.channel) {
         const id = c.channel.id.value;
         if (c.channel.id.termType === "NamedNode") {
@@ -131,16 +137,21 @@ export class ChannelFactory {
     throw "Unknown reader channel " + config.ty.value;
   }
 
-  createWriter(config: Config): Writer<string | Buffer> {
+  createWriter(config: Config<any>): Writer<string | Buffer> {
+    LOG.channel("Creating writer %s: a %s", config.id.value, config.ty.value);
     if (config.ty.equals(Conn.FileWriterChannel)) {
-      const { writer, init } = startFileStreamWriter(<FileWriterConfig>config);
+      const { writer, init } = startFileStreamWriter(
+        <FileWriterConfig>config.config,
+      );
       this.inits.push(init);
 
       return writer;
     }
 
     if (config.ty.equals(Conn.WsWriterChannel)) {
-      const { writer, init } = startWsStreamWriter(<WsWriterConfig>config);
+      const { writer, init } = startWsStreamWriter(
+        <WsWriterConfig>config.config,
+      );
       this.inits.push(init);
 
       return writer;
@@ -148,20 +159,22 @@ export class ChannelFactory {
 
     if (config.ty.equals(Conn.KafkaWriterChannel)) {
       const { writer, init } = startKafkaStreamWriter(
-        <KafkaWriterConfig>config,
+        <KafkaWriterConfig>config.config,
       );
       this.inits.push(init);
       return writer;
     }
 
     if (config.ty.equals(Conn.HttpWriterChannel)) {
-      const { writer, init } = startHttpStreamWriter(<HttpWriterConfig>config);
+      const { writer, init } = startHttpStreamWriter(
+        <HttpWriterConfig>config.config,
+      );
       this.inits.push(init);
       return writer;
     }
 
     if (config.ty.equals(JsOntology.JsWriterChannel)) {
-      const c = <JsChannel>config;
+      const c = <JsChannel>config.config;
       if (c.channel) {
         const id = c.channel.id.value;
         if (c.channel.id.termType === "NamedNode") {
