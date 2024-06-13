@@ -1,6 +1,6 @@
 # Js-runner
 
-[![Bun CI](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml/badge.svg)](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml)[![npm](https://img.shields.io/npm/v/@rdcf/js-runner.svg?style=popout)](https://npmjs.com/package/@rdfc/js-runner)
+[![Bun CI](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml/badge.svg)](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/@rdfc/js-runner.svg?style=popout)](https://npmjs.com/package/@rdfc/js-runner)
 
 Typescript/Javascript executor for an [RDF-Connect](https://rdf-connect.github.io/rdfc.github.io/) pipeline. Starting from a declarative RDF file describing the pipeline.
 
