@@ -1,5 +1,5 @@
 {
-  "name": "@ajuvercr/js-runner",
+  "name": "@rdfc/js-runner",
   "version": "0.2.0",
   "type": "module",
   "exports": {
