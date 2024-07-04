@@ -23,7 +23,8 @@
     "build:recompose": "sed -z 's/var __require = (id) => {\\n  return import.meta.require(id);\\n};/import Module from \"node:module\";\\nconst __require = Module.createRequire(import.meta.url);/' -i bin/bundle.mjs",
     "watch": "tsc -w",
     "test": "vitest run --coverage --coverage.include src",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [],
   "author": "",
