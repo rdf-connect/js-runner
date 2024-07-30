@@ -3,134 +3,134 @@ import { appendFile, readFile, stat, writeFile } from "fs/promises";
 import { isAbsolute } from "path";
 import { watch } from "node:fs";
 import {
-  ReaderConstructor,
-  SimpleStream,
-  WriterConstructor,
+    ReaderConstructor,
+    SimpleStream,
+    WriterConstructor,
 } from "../connectors";
 
 interface FileError extends Error {
-  code: string;
+    code: string;
 }
 
 export interface FileReaderConfig {
-  path: string;
-  onReplace: boolean;
-  readFirstContent?: boolean;
-  encoding?: string;
+    path: string;
+    onReplace: boolean;
+    readFirstContent?: boolean;
+    encoding?: string;
 }
 
 export interface FileWriterConfig {
-  path: string;
-  onReplace: boolean;
-  readFirstContent?: boolean;
-  encoding?: string;
+    path: string;
+    onReplace: boolean;
+    readFirstContent?: boolean;
+    encoding?: string;
 }
 
 async function getFileSize(path: string): Promise<number> {
-  return (await stat(path)).size;
+    return (await stat(path)).size;
 }
 
 function readPart(
-  path: string,
-  start: number,
-  end: number,
-  encoding: BufferEncoding,
+    path: string,
+    start: number,
+    end: number,
+    encoding: BufferEncoding,
 ): Promise<string> {
-  return new Promise((res) => {
-    const stream = createReadStream(path, { encoding, start, end });
-    let buffer = "";
-    stream.on("data", (chunk) => {
-      buffer += chunk;
+    return new Promise((res) => {
+        const stream = createReadStream(path, { encoding, start, end });
+        let buffer = "";
+        stream.on("data", (chunk) => {
+            buffer += chunk;
+        });
+        stream.on("close", () => res(buffer));
     });
-    stream.on("close", () => res(buffer));
-  });
 }
 
 function debounce<A>(func: (t: A) => void, timeout = 100): (t: A) => void {
-  let timer: ReturnType<typeof setTimeout>;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      func(...args);
-    }, timeout);
-  };
+    let timer: ReturnType<typeof setTimeout>;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            func(...args);
+        }, timeout);
+    };
 }
 export const startFileStreamReader: ReaderConstructor<FileReaderConfig> = (
-  config,
+    config,
 ) => {
-  const path = isAbsolute(config.path)
-    ? config.path
-    : `${process.cwd()}/${config.path}`;
-  openSync(path, "a+");
-  const encoding: BufferEncoding = <BufferEncoding>config.encoding || "utf-8";
-  const reader = new SimpleStream<string>();
+    const path = isAbsolute(config.path)
+        ? config.path
+        : `${process.cwd()}/${config.path}`;
+    openSync(path, "a+");
+    const encoding: BufferEncoding = <BufferEncoding>config.encoding || "utf-8";
+    const reader = new SimpleStream<string>();
 
-  const init = async () => {
-    let currentPos = await getFileSize(path);
-    const watcher = watch(path, { encoding: "utf-8" });
-    watcher.on(
-      "change",
-      debounce(async () => {
-        try {
-          let content: string;
-          if (config.onReplace) {
-            content = await readFile(path, { encoding });
-          } else {
-            const newSize = await getFileSize(path);
+    const init = async () => {
+        let currentPos = await getFileSize(path);
+        const watcher = watch(path, { encoding: "utf-8" });
+        watcher.on(
+            "change",
+            debounce(async () => {
+                try {
+                    let content: string;
+                    if (config.onReplace) {
+                        content = await readFile(path, { encoding });
+                    } else {
+                        const newSize = await getFileSize(path);
 
-            if (newSize <= currentPos) {
-              currentPos = newSize;
-              return;
-            }
+                        if (newSize <= currentPos) {
+                            currentPos = newSize;
+                            return;
+                        }
 
-            content = await readPart(path, currentPos, newSize, encoding);
-            currentPos = newSize;
-          }
+                        content = await readPart(path, currentPos, newSize, encoding);
+                        currentPos = newSize;
+                    }
 
-          await reader.push(content);
-        } catch (error: unknown) {
-          if ((<FileError>error).code === "ENOENT") {
-            return;
-          }
-          throw error;
+                    await reader.push(content);
+                } catch (error: unknown) {
+                    if ((<FileError>error).code === "ENOENT") {
+                        return;
+                    }
+                    throw error;
+                }
+            }),
+        );
+
+        if (config.onReplace && config.readFirstContent) {
+            const content = await readFile(path, { encoding });
+            await reader.push(content);
         }
-      }),
-    );
+    };
 
-    if (config.onReplace && config.readFirstContent) {
-      const content = await readFile(path, { encoding });
-      await reader.push(content);
-    }
-  };
-
-  return { reader, init };
+    return { reader, init };
 };
 
 // export interface FileWriterConfig extends FileReaderConfig {}
 
 export const startFileStreamWriter: WriterConstructor<FileWriterConfig> = (
-  config,
+    config,
 ) => {
-  const path = isAbsolute(config.path)
-    ? config.path
-    : `${process.cwd()}/${config.path}`;
-  const encoding: BufferEncoding = <BufferEncoding>config.encoding || "utf-8";
+    const path = isAbsolute(config.path)
+        ? config.path
+        : `${process.cwd()}/${config.path}`;
+    const encoding: BufferEncoding = <BufferEncoding>config.encoding || "utf-8";
 
-  const init = async () => {
-    if (!config.onReplace) {
-      await writeFile(path, "", { encoding });
-    }
-  };
+    const init = async () => {
+        if (!config.onReplace) {
+            await writeFile(path, "", { encoding });
+        }
+    };
 
-  const push = async (item: string): Promise<void> => {
-    if (config.onReplace) {
-      await writeFile(path, item, { encoding });
-    } else {
-      await appendFile(path, item, { encoding });
-    }
-  };
+    const push = async (item: string): Promise<void> => {
+        if (config.onReplace) {
+            await writeFile(path, item, { encoding });
+        } else {
+            await appendFile(path, item, { encoding });
+        }
+    };
 
-  const end = async (): Promise<void> => {};
+    const end = async (): Promise<void> => { };
 
-  return { writer: { push, end }, init };
+    return { writer: { push, end }, init };
 };
