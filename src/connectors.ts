@@ -51,9 +51,7 @@ export type WriterConstructor<C> = (config: C) => {
 
 
 type JsChannel = {
-    channel: {
-        id: Term;
-    };
+    channel: Term;
 };
 
 export class ChannelFactory {
@@ -96,8 +94,8 @@ export class ChannelFactory {
         if (config.ty.equals(RDFC_JS.JSReaderChannel)) {
             const c = <JsChannel>config.config;
             if (c.channel) {
-                const id = c.channel.id.value;
-                if (c.channel.id.termType === "NamedNode") {
+                const id = c.channel.value;
+                if (c.channel.termType === "NamedNode") {
                     if (!this.jsChannelsNamedNodes[id]) {
                         this.jsChannelsNamedNodes[id] = new SimpleStream<string>();
                     }
@@ -105,7 +103,7 @@ export class ChannelFactory {
                     return this.jsChannelsNamedNodes[id];
                 }
 
-                if (c.channel.id.termType === "BlankNode") {
+                if (c.channel.termType === "BlankNode") {
                     if (!this.jsChannelsBlankNodes[id]) {
                         this.jsChannelsBlankNodes[id] = new SimpleStream<string>();
                     }
@@ -157,8 +155,8 @@ export class ChannelFactory {
         if (config.ty.equals(RDFC_JS.JSWriterChannel)) {
             const c = <JsChannel>config.config;
             if (c.channel) {
-                const id = c.channel.id.value;
-                if (c.channel.id.termType === "NamedNode") {
+                const id = c.channel.value;
+                if (c.channel.termType === "NamedNode") {
                     if (!this.jsChannelsNamedNodes[id]) {
                         this.jsChannelsNamedNodes[id] = new SimpleStream<string>();
                     }
@@ -166,7 +164,7 @@ export class ChannelFactory {
                     return this.jsChannelsNamedNodes[id];
                 }
 
-                if (c.channel.id.termType === "BlankNode") {
+                if (c.channel.termType === "BlankNode") {
                     if (!this.jsChannelsBlankNodes[id]) {
                         this.jsChannelsBlankNodes[id] = new SimpleStream<string>();
                     }

@@ -109,8 +109,8 @@ export async function jsRunner() {
     const starts = [];
     for (const proc of processors) {
         const argss = extractSteps(proc, quads, config);
-        const jsProgram = await import("file://" + proc.file);
-        process.chdir(proc.location);
+        const jsProgram = await import(proc.file.startsWith("file://") ? proc.file : "file://" + proc.file);
+        process.chdir(proc.location.startsWith("file://") ? proc.location.slice(7) : proc.location);
         for (const args of argss) {
             starts.push(await jsProgram[proc.func](...args));
         }
