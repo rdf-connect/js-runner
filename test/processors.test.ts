@@ -1,9 +1,15 @@
 import { describe, expect, test } from "vitest";
 import { extractProcessors, extractSteps, Source } from "../src/index";
+
+type ChannelArg = {
+    config: { channel: { id: string } };
+    ty: string;
+};
+
 const prefixes = `
-@prefix js: <https://w3id.org/conn/js#>.
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#>.
 @prefix ws: <https://w3id.org/conn/ws#>.
-@prefix : <https://w3id.org/conn#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
@@ -11,18 +17,18 @@ const prefixes = `
 @prefix rdfl: <https://w3id.org/rdf-lens/ontology#>.
 `;
 
-const JS = "https://w3id.org/conn/js#";
+const JS = "https://w3id.org/rdf-connect/js#";
 describe("test existing processors", () => {
     test("resc.ttl", async () => {
         const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/resc.ttl>.
 
-[ ] a :Channel;
-  :reader <jr>;
-  :writer <jw>.
-<jr> a js:JsReaderChannel.
-[ ] a js:Resc;
-  js:rescReader <jr>.
+[ ] a rdfc-js:JSChannel;
+    rdfc:reader <jr>;
+    rdfc:writer <jw>.
+<jr> a rdfc-js:JSReaderChannel.
+[ ] a rdfc-js:Resc;
+    rdfc-js:rescReader <jr>.
 `;
         const baseIRI = process.cwd() + "/config.ttl";
 
@@ -47,23 +53,23 @@ describe("test existing processors", () => {
 
         const [[arg]] = argss;
         expect(arg).toBeInstanceOf(Object);
-        expect(arg.config.channel).toBeDefined();
-        expect(arg.config.channel.id).toBeDefined();
-        expect(arg.ty).toBeDefined();
+        expect((<ChannelArg>arg).config.channel).toBeDefined();
+        expect((<ChannelArg>arg).config.channel.id).toBeDefined();
+        expect((<ChannelArg>arg).ty).toBeDefined();
     });
 
     test("send.ttl", async () => {
         const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/send.ttl> .
 
-[ ] a :Channel;
-  :reader <jr>;
-  :writer <jw>.
-<jr> a js:JsReaderChannel.
-<jw> a js:JsWriterChannel.
-[ ] a js:Send;
-  js:msg "Hello world!";
-  js:sendWriter <jw>.
+[ ] a rdfc-js:JSChannel;
+    rdfc:reader <jr>;
+    rdfc:writer <jw>.
+<jr> a rdfc-js:JSReaderChannel.
+<jw> a rdfc-js:JSWriterChannel.
+[ ] a rdfc-js:Send;
+    rdfc-js:msg "Hello world!";
+    rdfc-js:sendWriter <jw>.
 `;
         const baseIRI = process.cwd() + "/config.ttl";
 
@@ -89,27 +95,27 @@ describe("test existing processors", () => {
         const [[msg, writer]] = argss;
         expect(msg).toBe("Hello world!");
         expect(writer).toBeInstanceOf(Object);
-        expect(writer.config.channel).toBeDefined();
-        expect(writer.config.channel.id).toBeDefined();
-        expect(writer.ty).toBeDefined();
+        expect((<ChannelArg>writer).config.channel).toBeDefined();
+        expect((<ChannelArg>writer).config.channel.id).toBeDefined();
+        expect((<ChannelArg>writer).ty).toBeDefined();
     });
 
     describe("send.ttl from env", async () => {
         const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/send.ttl> .
 
-[ ] a :Channel;
-  :reader <jr>;
-  :writer <jw>.
-<jr> a js:JsReaderChannel.
-<jw> a js:JsWriterChannel.
-[ ] a js:Send;
-  js:msg [
-    a rdfl:EnvVariable;
-    rdfl:envDefault "FromEnv";
-    rdfl:envKey "msg"
-  ];
-  js:sendWriter <jw>.
+[ ] a rdfc-js:JSChannel;
+    rdfc:reader <jr>;
+    rdfc:writer <jw>.
+<jr> a rdfc-js:JSReaderChannel.
+<jw> a rdfc-js:JSWriterChannel.
+[ ] a rdfc-js:Send;
+    rdfc-js:msg [
+        a rdfl:EnvVariable;
+        rdfl:envDefault "FromEnv";
+        rdfl:envKey "msg"
+    ];
+    rdfc-js:sendWriter <jw>.
 `;
         const baseIRI = process.cwd() + "/config.ttl";
 
@@ -136,9 +142,9 @@ describe("test existing processors", () => {
             const [[msg, writer]] = argss;
             expect(msg).toBe("FromEnv");
             expect(writer).toBeInstanceOf(Object);
-            expect(writer.config.channel).toBeDefined();
-            expect(writer.config.channel.id).toBeDefined();
-            expect(writer.ty).toBeDefined();
+            expect((<ChannelArg>writer).config.channel).toBeDefined();
+            expect((<ChannelArg>writer).config.channel.id).toBeDefined();
+            expect((<ChannelArg>writer).ty).toBeDefined();
         });
 
         test("Env value", () => {
@@ -153,9 +159,9 @@ describe("test existing processors", () => {
             const [[msg, writer]] = argss;
             expect(msg).toBe("FROM ENV");
             expect(writer).toBeInstanceOf(Object);
-            expect(writer.config.channel).toBeDefined();
-            expect(writer.config.channel.id).toBeDefined();
-            expect(writer.ty).toBeDefined();
+            expect((<{ config: { channel: { id: string } }, ty: string }>writer).config.channel).toBeDefined();
+            expect((<{ config: { channel: { id: string } }, ty: string }>writer).config.channel.id).toBeDefined();
+            expect((<{ config: { channel: { id: string } }, ty: string }>writer).ty).toBeDefined();
         });
     });
 
@@ -163,16 +169,16 @@ describe("test existing processors", () => {
         const value = `${prefixes}
 <> owl:imports <./ontology.ttl>, <./processor/echo.ttl> .
 
-[ ] a :Channel;
-  :reader <jr>;
-  :writer <jw>.
+[ ] a rdfc-js:JSChannel;
+    rdfc:reader <jr>;
+    rdfc:writer <jw>.
 
-<jr> a js:JsReaderChannel.
-<jw> a js:JsWriterChannel.
+<jr> a rdfc-js:JSReaderChannel.
+<jw> a rdfc-js:JSWriterChannel.
 
-[ ] a js:Echo;
-  js:input <jr>;
-  js:output <jw>.
+[ ] a rdfc-js:Echo;
+    rdfc-js:input <jr>;
+    rdfc-js:output <jw>.
 `;
         const baseIRI = process.cwd() + "/config.ttl";
 
@@ -197,13 +203,13 @@ describe("test existing processors", () => {
         const [[reader, writer]] = argss;
 
         expect(reader).toBeInstanceOf(Object);
-        expect(reader.config.channel).toBeDefined();
-        expect(reader.config.channel.id).toBeDefined();
-        expect(reader.ty).toBeDefined();
+        expect((<ChannelArg>reader).config.channel).toBeDefined();
+        expect((<ChannelArg>reader).config.channel.id).toBeDefined();
+        expect((<ChannelArg>reader).ty).toBeDefined();
 
         expect(writer).toBeInstanceOf(Object);
-        expect(writer.config.channel).toBeDefined();
-        expect(writer.config.channel.id).toBeDefined();
-        expect(writer.ty).toBeDefined();
+        expect((<ChannelArg>reader).config.channel).toBeDefined();
+        expect((<ChannelArg>reader).config.channel.id).toBeDefined();
+        expect((<ChannelArg>reader).ty).toBeDefined();
     });
 });

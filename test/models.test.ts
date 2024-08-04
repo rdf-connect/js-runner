@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 const prefixes = `
-@prefix js: <https://w3id.org/conn/js#> .
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#> .
 @prefix fno: <https://w3id.org/function/ontology#> .
 @prefix fnom: <https://w3id.org/function/vocabulary/mapping#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix : <https://w3id.org/conn#> .
+@prefix rdfc: <https://w3id.org/rdf-connect#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 `;
 
@@ -14,34 +14,34 @@ describe("Processor Lens", () => {
         const turtle = `
 ${prefixes}
 
-js:Echo a js:JsProcess;
-  js:file <./test.js>;
-  js:function "echo";
-  js:location <./>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:input ;
-      fnom:implementationParameterPosition "0"^^xsd:int
-    ], [
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:output ;
-      fnom:implementationParameterPosition "1"^^xsd:int
-    ]
+rdfc-js:Echo a rdfc-js:Processor;
+    rdfc-js:file <./test.js>;
+    rdfc-js:function "echo";
+    rdfc-js:location <./>;
+    rdfc-js:mapping [
+        a fno:Mapping;
+            fno:parameterMapping [
+            a fnom:PositionParameterMapping ;
+            fnom:functionParameter js:input ;
+            fnom:implementationParameterPosition "0"^^xsd:integer
+        ], [
+            a fnom:PositionParameterMapping ;
+            fnom:functionParameter js:output ;
+            fnom:implementationParameterPosition "1"^^xsd:integer
+        ]
   ].
 
 [] a sh:NodeShape;
-  sh:targetClass js:Echo;
-  sh:property [
-    sh:class :ReaderChannel;
-    sh:path js:input;
-    sh:name "Input Channel"
-  ], [
-    sh:class :WriterChannel;
-    sh:path js:output;
-    sh:name "Output Channel"
-  ].
+    sh:targetClass rdfc-js:Echo;
+    sh:property [
+        sh:class rdfc:ReaderChannel;
+        sh:path rdfc-js:input;
+        sh:name "Input Channel"
+    ], [
+        sh:class rdfc:WriterChannel;
+        sh:path rdfc-js:output;
+        sh:name "Output Channel"
+    ].
 `;
         // const quads = new Parser().parse(turtle);
         //

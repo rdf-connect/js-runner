@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import * as conn from "../../src/connectors";
 import { HttpReaderConfig, HttpWriterConfig } from "../../src/connectors/http";
-import { namedNode } from "../../src/util";
+import { namedNode, RDFC } from "../../src/util";
 
 describe("connector-http", () => {
     test("Should write -> HTTP -> read (string)", async () => {
@@ -19,12 +19,12 @@ describe("connector-http", () => {
         const reader = factory.createReader({
             config: readerConfig,
             id: namedNode("reader"),
-            ty: conn.Conn.HttpReaderChannel,
+            ty: RDFC.HttpReaderChannel,
         });
         const writer = factory.createWriter({
             config: writerConfig,
             id: namedNode("writer"),
-            ty: conn.Conn.HttpWriterChannel,
+            ty: RDFC.HttpWriterChannel,
         });
 
         reader.data((data) => {
@@ -61,12 +61,12 @@ describe("connector-http", () => {
         const reader = factory.createReader({
             config: readerConfig,
             id: namedNode("reader"),
-            ty: conn.Conn.HttpReaderChannel,
+            ty: RDFC.HttpReaderChannel,
         });
         const writer = factory.createWriter({
             config: writerConfig,
             id: namedNode("writer"),
-            ty: conn.Conn.HttpWriterChannel,
+            ty: RDFC.HttpWriterChannel,
         });
 
         reader.data((data) => {
@@ -104,12 +104,12 @@ describe("connector-http", () => {
         const reader = factory.createReader({
             config: readerConfig,
             id: namedNode("reader"),
-            ty: conn.Conn.HttpReaderChannel,
+            ty: RDFC.HttpReaderChannel,
         });
         const writer = factory.createWriter({
             config: writerConfig,
             id: namedNode("writer"),
-            ty: conn.Conn.HttpWriterChannel,
+            ty: RDFC.HttpWriterChannel,
         });
 
         reader.data(async (data) => {
@@ -145,7 +145,7 @@ describe("connector-http", () => {
         const reader = factory.createReader({
             config: readerConfig,
             id: namedNode("reader"),
-            ty: conn.Conn.HttpReaderChannel,
+            ty: RDFC.HttpReaderChannel,
         });
 
         reader.data((data) => {

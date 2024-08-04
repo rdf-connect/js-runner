@@ -1,169 +1,21 @@
-@prefix js: <https://w3id.org/conn/js#>.
-@prefix fno: <https://w3id.org/function/ontology#>.
-@prefix fnom: <https://w3id.org/function/vocabulary/mapping#>.
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
-@prefix : <https://w3id.org/conn#>.
-@prefix sh: <http://www.w3.org/ns/shacl#>.
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
-@prefix dc: <http://purl.org/dc/terms/>.
-@prefix rdfl: <https://w3id.org/rdf-lens/ontology#>.
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfc: <https://w3id.org/rdf-connect#> .
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#> .
+@prefix dc: <http://purl.org/dc/terms/> .
 
-[ ] a sh:NodeShape;
-  sh:targetClass :Channel;
-  sh:property [
-    sh:path ( );
-    sh:name "id";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:datatype xsd:iri;
-  ], [
-    sh:path :reader;
-    sh:name "reader";
-    sh:maxCount 1;
-    sh:datatype xsd:iri;
-  ], [
-    sh:path :writer;
-    sh:name "writer";
-    sh:maxCount 1;
-    sh:datatype xsd:iri;
-  ].
+<> owl:imports rdfc: .
 
-[ ] a sh:NodeShape;
-  sh:targetClass :ReaderChannel;
-  sh:property [
-    sh:path ( );
-    sh:name "id";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:datatype xsd:iri;
-  ], [
-    sh:path rdf:type;
-    sh:name "ty";
-    sh:maxCount 1;
-    sh:datatype xsd:iri;
-  ], [
-    sh:path ( );
-    sh:name "config";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:class rdfl:TypedExtract;
-  ].
-
-[ ] a sh:NodeShape;
-  sh:targetClass :WriterChannel;
-  sh:property [
-    sh:path ( );
-    sh:name "id";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:datatype xsd:iri;
-  ], [
-    sh:path rdf:type;
-    sh:name "ty";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:datatype xsd:iri;
-  ], [
-    sh:path ( );
-    sh:name "config";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:class rdfl:TypedExtract;
-  ].
-
-js:JsChannel rdfs:subClassOf :Channel.
-js:JsReaderChannel rdfs:subClassOf :ReaderChannel.
-[ ] a sh:NodeShape;
-  sh:targetClass js:JsReaderChannel;
-  sh:property [
-    sh:path [ sh:inversePath :reader ];
-    sh:name "channel";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:class :Channel;
-  ].
-
-js:JsWriterChannel rdfs:subClassOf :WriterChannel.
-[ ] a sh:NodeShape;
-  sh:targetClass js:JsWriterChannel;
-  sh:property [
-    sh:path [ sh:inversePath :writer ];
-    sh:name "channel";
-    sh:maxCount 1;
-    sh:minCount 1;
-    sh:class :Channel;
-  ].
-
-#
-js:JsChannel a :Channel;
-  dc:title "Javascript in memory channel";
-  dc:description "Channel only used by the JsRunner, enabling fast in memory communication.";
-  :reader :JsReaderChannel;
-  :writer :JsWriterChannel.
-
-js:JsProcess a :ProcessClass;
-  dc:title "Javascript Runner";
-  dc:description "The JSRunner is one of the most feature rich runners of the connector architecture. It enables lifting javascript functions to connector architecture components. It allows for fast in memory communication between these processors with the js:JsChannel. More information can be found at https://the-connector-architecture.github.io/site/.";
-  :supportsChannel :WsChannel,
-    :JsChannel,
-    :FileChannel,
-    :KafkaChannel,
-    :HttpChannel.
-
-[ ] a sh:NodeShape;
-  sh:targetClass fno:Mapping;
-  sh:property [
-    sh:class fnom:PositionParameterMapping;
-    sh:path fno:parameterMapping;
-    sh:name "parameters";
-  ].
-
-[ ] a sh:NodeShape;
-  sh:targetClass fnom:PositionParameterMapping;
-  sh:property [
-    sh:datatype xsd:string;
-    sh:path fnom:functionParameter;
-    sh:name "parameter";
-    sh:maxCount 1;
-  ], [
-    sh:datatype xsd:integer;
-    sh:path fnom:implementationParameterPosition;
-    sh:name "position";
-    sh:maxCount 1;
-  ].
-
-js:JsProcessorShape a sh:NodeShape;
-  sh:targetClass js:JsProcess;
-  sh:property [
-    sh:datatype xsd:iri;
-    sh:path ( );
-    sh:name "ty";
-    sh:maxCount 1;
-    sh:minCount 1;
-  ], [
-    sh:datatype xsd:string;
-    sh:path js:file;
-    sh:name "file";
-    sh:maxCount 1;
-    sh:minCount 1;
-  ], [
-    sh:datatype xsd:string;
-    sh:path js:location;
-    sh:name "location";
-    sh:maxCount 1;
-    sh:minCount 1;
-  ], [
-    sh:datatype xsd:string;
-    sh:path js:function;
-    sh:name "func";
-    sh:maxCount 1;
-    sh:minCount 1;
-  ], [
-    sh:class fno:Mapping;
-    sh:path js:mapping;
-    sh:name "mapping";
-    sh:maxCount 1;
-    sh:minCount 1;
-  ].
-
+rdfc-js:IDLab_JSRunner a rdfc-js:Runner ;
+    dc:title "JavaScript Runner instance" ;
+    dc:description """
+        The JavaScript Runner is one of the most feature rich runners in the RDF-Connect framework. 
+        It enables lifting javascript functions to RDF-Connect processors. 
+        It allows for fast in-memory communication between these processors with the rdfc-js:Channel. 
+        More information can be found at https://github.com/rdf-connect.
+    """;
+    rdfc:supportsChannel rdfc-js:Channel, 
+        rdfc:FileChannel, 
+        rdfc:HttpChannel, 
+        rdfc:KafkaChannel, 
+        rdfc:WebSocketChannel .

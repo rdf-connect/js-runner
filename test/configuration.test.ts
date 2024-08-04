@@ -1,30 +1,34 @@
 import { describe, expect, test } from "vitest";
-import { Quad } from "@rdfjs/types";
+import { NamedNode, Quad } from "@rdfjs/types";
 import { RDF } from "@treecg/types";
 import { readFileSync } from "fs";
-import { DataFactory, Parser } from "n3";
+import { DataFactory, Parser, Store } from "n3";
 import { extractShapes } from "rdf-lens";
+import { load_store, RDFC_JS, safeJoin } from "../src/util";
 
 function parseQuads(inp: string): Quad[] {
     return new Parser().parse(inp);
 }
 
-function parseConfig() {
-    const file = readFileSync("./ontology.ttl", { encoding: "utf8" });
-    const quads = parseQuads(file);
-    return extractShapes(quads);
+async function parseConfig() {
+    const store = new Store();
+    await load_store({
+        type: "remote",
+        location: safeJoin(process.cwd(), "ontology.ttl")
+    }, store);
+    return extractShapes(store.getQuads(null, null, null, null));
 }
 
-const JsProcessor = DataFactory.namedNode("https://w3id.org/conn/js#JsProcess");
+const JSProcessor = DataFactory.namedNode("https://w3id.org/rdf-connect/js#Processor");
 describe("Input test", () => {
-    test("Parse configuration", () => {
-        const output = parseConfig();
-        expect(output.shapes.length).toBe(8);
-        expect(output.lenses[JsProcessor.value]).toBeDefined();
+    test("Parse configuration", async () => {
+        const output = await parseConfig();
+        expect(output.shapes.length).toBe(25);
+        expect(output.lenses[JSProcessor.value]).toBeDefined();
     });
 
-    test("Parse processor config", () => {
-        const config = parseConfig();
+    test("Parse processor config", async () => {
+        const config = await parseConfig();
         const processorFile = readFileSync("./processor/send.ttl", {
             encoding: "utf8",
         });
@@ -33,7 +37,7 @@ describe("Input test", () => {
         const quad = quads.find(
             (x) =>
                 x.predicate.equals(RDF.terms.type) &&
-                x.object.equals(JsProcessor),
+                x.object.equals(JSProcessor),
         )!;
         const object = config.lenses[quad.object.value].execute({
             id: quad.subject,
@@ -43,32 +47,32 @@ describe("Input test", () => {
         expect(object).toBeDefined();
     });
 
-    test("parse js-runner pipeline", () => {
-        const parse = (location: string) =>
-            parseQuads(readFileSync(location, { encoding: "utf8" }));
-        const files = [
-            "./ontology.ttl",
-            "./processor/send.ttl",
-            "./processor/resc.ttl",
-            "./input.ttl",
-        ];
-        const quads = files.flatMap(parse);
+    test("parse js-runner pipeline", async () => {
+        const store = new Store();
+
+        await load_store({
+            type: "remote",
+            location: safeJoin(process.cwd(), "input.ttl")
+        }, store);
+
+        const quads = store.getQuads(null, null, null, null);
         const config = extractShapes(quads);
 
         const subjects = quads
             .filter(
                 (x) =>
                     x.predicate.equals(RDF.terms.type) &&
-                    x.object.equals(JsProcessor),
+                    x.object.equals(JSProcessor),
             )
             .map((x) => x.subject);
-        const processorLens = config.lenses[JsProcessor.value];
+        const processorLens = config.lenses[JSProcessor.value];
         const processors = subjects.map((id) =>
             processorLens.execute({ id, quads: quads }),
         );
 
         const found: unknown[] = [];
         for (const proc of processors) {
+            const processorLens = config.lenses[proc.ty.value];
             const subjects = quads
                 .filter(
                     (x) =>
@@ -76,13 +80,17 @@ describe("Input test", () => {
                         x.object.equals(proc.ty),
                 )
                 .map((x) => x.subject);
-            const processorLens = config.lenses[proc.ty.value];
-
+                
             found.push(
                 ...subjects.map((id) =>
                     processorLens.execute({ id, quads: quads }),
                 ),
             );
         }
+        expect(found.length).toBe(2);
+        expect((<{ msg: string, output: { id: NamedNode, ty: NamedNode } }>found[0]).msg).toBe("Hello");
+        expect((<{ msg: string, output: { id: NamedNode, ty: NamedNode } }>found[0]).output.id).toBeDefined();
+        expect((<{ msg: string, output: { id: NamedNode, ty: NamedNode } }>found[0]).output.ty.value)
+            .toBe(RDFC_JS.JSWriterChannel.value);
     });
 });

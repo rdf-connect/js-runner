@@ -1,11 +1,10 @@
-import { createReadStream } from "fs";
-import http from "http";
-import https from "https";
+import { rdfDereferencer } from "rdf-dereference";
 import stream from "stream";
-import { DataFactory, Parser, Store, StreamParser } from "n3";
-import { createUriAndTermNamespace } from "@treecg/types";
+import { DataFactory, Parser, Store } from "n3";
+import { createTermNamespace, createUriAndTermNamespace } from "@treecg/types";
 import { Source } from ".";
 import { Quad, Term } from "@rdfjs/types";
+import path from "path";
 
 import debug from "debug";
 
@@ -31,47 +30,51 @@ export const OWL = createUriAndTermNamespace(
     "http://www.w3.org/2002/07/owl#",
     "imports",
 );
-export const CONN2 = createUriAndTermNamespace(
-    "https://w3id.org/conn#",
-    "install",
-    "build",
-    "GitInstall",
-    "LocalInstall",
-    "url",
-    "procFile",
-    "path",
-    "EnvVariable",
-    "envKey",
-    "envDefault",
+
+export const RDFC = createTermNamespace(
+    "https://w3id.org/rdf-connect#",
+    "WriterChannel",
+    "ReaderChannel",
+    "FileReaderChannel",
+    "FileWriterChannel",
+    "HttpReaderChannel",
+    "HttpWriterChannel",
+    "KafkaReaderChannel",
+    "KafkaWriterChannel",
+    "WebSocketReaderChannel",
+    "WebSocketWriterChannel"
 );
+
+export const RDFC_JS = createTermNamespace(
+    "https://w3id.org/rdf-connect/js#",
+    "Processor",
+    "JSChannel",
+    "JSReaderChannel",
+    "JSWriterChannel",
+);
+
 export const { namedNode, literal } = DataFactory;
 
 export type Keyed<T> = { [Key in keyof T]: Term | undefined };
 
 export type Map<V, K, T, O> = (value: V, key: K, item: T) => O;
 
-async function get_readstream(location: string): Promise<stream.Readable> {
-    if (location.startsWith("https")) {
-        return new Promise((res) => {
-            https.get(location, res);
-        });
-    } else if (location.startsWith("http")) {
-        return new Promise((res) => {
-            http.get(location, res);
-        });
-    } else {
-        return createReadStream(location);
+export function safeJoin(a: string, b: string) {
+    if (b.startsWith("/")) {
+        return b;
     }
+    return path.join(a, b);
 }
 
 export async function load_quads(location: string, baseIRI?: string) {
     try {
         LOG.util("Loading quads %s", location);
-        const parser = new StreamParser({ baseIRI: baseIRI || location });
-        const rdfStream = await get_readstream(location);
-        rdfStream.pipe(parser);
+        const { data } = await rdfDereferencer.dereference(location, { localFiles: true });
+        const quads: Quad[] = [];
 
-        const quads: Quad[] = await toArray(parser);
+        for await (const quad of data) {
+            quads.push(quad);
+        }
         return quads;
     } catch (ex) {
         console.error("Failed to load_quads", location, baseIRI);
@@ -102,15 +105,32 @@ export async function load_store(
     store.addQuads(quads);
 
     if (recursive) {
-        const loc =
-            location.type === "remote" ? location.location : location.baseIRI;
-        const other_imports = store.getObjects(
-            namedNode(loc),
-            OWL.terms.imports,
-            null,
-        );
+        let other_imports = [];
+        let loc = "";
+
+        if (location.type === "remote") {
+            loc = location.location;
+            other_imports = store.getObjects(
+                namedNode(loc.startsWith("/") ? `file://${loc}` : loc),
+                OWL.terms.imports,
+                null,
+            );
+        } else {
+            loc = location.baseIRI;
+            other_imports = store.getObjects(
+                namedNode(loc),
+                OWL.terms.imports,
+                null,
+            );
+        }
         for (const other of other_imports) {
-            await load_store({ location: other.value, type: "remote" }, store, true);
+            await load_store(
+                {
+                    location: other.value.startsWith("file://") ? other.value.slice(7) : other.value, 
+                    type: "remote"
+                },
+                store, true
+            );
         }
     }
 }

@@ -1,22 +1,14 @@
 import { Store } from "n3";
 import { getArgs } from "./args";
-import { load_store, LOG } from "./util";
+import { load_store, safeJoin, LOG, RDFC, RDFC_JS } from "./util";
 
 export * from "./connectors";
 
-import path from "path";
 import { RDF } from "@treecg/types";
-import { ChannelFactory, Conn, JsOntology } from "./connectors";
+import { ChannelFactory } from "./connectors";
 import { Quad, Term } from "@rdfjs/types";
 
 import { extractShapes, Shapes } from "rdf-lens";
-
-function safeJoin(a: string, b: string) {
-    if (b.startsWith("/")) {
-        return b;
-    }
-    return path.join(a, b);
-}
 
 type Processor = {
     ty: Term;
@@ -53,10 +45,10 @@ export async function extractProcessors(
         .filter(
             (x) =>
                 x.predicate.equals(RDF.terms.type) &&
-                x.object.equals(JsOntology.JsProcess),
+                x.object.equals(RDFC_JS.Processor),
         )
         .map((x) => x.subject);
-    const processorLens = config.lenses[JsOntology.JsProcess.value];
+    const processorLens = config.lenses[RDFC_JS.Processor.value];
     const processors = subjects.map((id) => processorLens.execute({ id, quads }));
     return { processors, quads, shapes: config };
 }
@@ -103,8 +95,8 @@ export async function jsRunner() {
     const factory = new ChannelFactory();
     /// Small hack, if something is extracted from these types, that should be converted to a reader/writer
     const apply: { [label: string]: (item: unknown) => unknown } = {};
-    apply[Conn.ReaderChannel.value] = factory.createReader.bind(factory);
-    apply[Conn.WriterChannel.value] = factory.createWriter.bind(factory);
+    apply[RDFC.ReaderChannel.value] = factory.createReader.bind(factory);
+    apply[RDFC.WriterChannel.value] = factory.createWriter.bind(factory);
 
     const {
         processors,

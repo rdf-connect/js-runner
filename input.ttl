@@ -1,27 +1,26 @@
-@prefix js: <https://w3id.org/conn/js#>.
-@prefix ws: <https://w3id.org/conn/ws#>.
-@prefix : <https://w3id.org/conn#>.
-@prefix owl: <http://www.w3.org/2002/07/owl#>.
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
-@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#> .
+@prefix rdfc: <https://w3id.org/rdf-connect#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
 
-<> owl:imports <./channels/ws.ttl>.
 <> owl:imports <./processor/echo.ttl>,
-  <./processor/send.ttl>,
-  <./processor/resc.ttl>,
-  <./ontology.ttl>.
+    <./processor/send.ttl>,
+    <./processor/resc.ttl>,
+    <./ontology.ttl> .
 
-[ ] a :Channel;
-  :reader <jr>;
-  :writer <jw>.
+[ ] a rdfc-js:JSChannel ;
+    rdfc:reader <jr> ;
+    rdfc:writer <jw> .
 
-<jr> a js:JsReaderChannel.
-<jw> a js:JsWriterChannel.
-[ ] a js:Send;
-  js:msg "Hello";
-  js:sendWriter <jw>.
+<jr> a rdfc-js:JSReaderChannel .
+<jw> a rdfc-js:JSWriterChannel .
 
-[ ] a js:Resc;
-  js:rescReader <jr>.
+[ ] a rdfc-js:Send ;
+    rdfc-js:msg "Hello" ;
+    rdfc-js:sendWriter <jw> .
+
+[ ] a rdfc-js:Resc ;
+    rdfc-js:rescReader <jr> .
 

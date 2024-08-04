@@ -1,34 +1,29 @@
-@prefix js: <https://w3id.org/conn/js#>.
-@prefix fno: <https://w3id.org/function/ontology#>.
-@prefix fnom: <https://w3id.org/function/vocabulary/mapping#>.
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
-@prefix : <https://w3id.org/conn#>.
-@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#> .
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix fno: <https://w3id.org/function/ontology#> .
+@prefix fnom: <https://w3id.org/function/vocabulary/mapping#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<> :install [
-  a :LocalInstall;
-  :path <./>;
-].
+rdfc-js:Resc a rdfc-js:Processor ;
+    rdfc-js:file <./test.js> ;
+    rdfc-js:function "resc" ;
+    rdfc-js:location <./> ;
+    rdfc-js:mapping [
+        a fno:Mapping ;
+        fno:parameterMapping [
+            a fnom:PositionParameterMapping ;
+            fnom:functionParameter "input" ;
+            fnom:implementationParameterPosition "0"^^xsd:integer 
+        ]
+    ] ;
+    rdfc:executedBy rdfc-js:Runner .
 
-js:Resc a js:JsProcess;
-  js:file <./test.js>;
-  js:function "resc";
-  js:location <./>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "input";
-      fnom:implementationParameterPosition "0"^^xsd:int;
-    ];
-  ].
-
-[ ] a sh:NodeShape;
-  sh:targetClass js:Resc;
-  sh:property [
-    sh:class :ReaderChannel;
-    sh:path js:rescReader;
-    sh:name "input";
-    sh:maxCount 1;
-  ].
-
+[ ] a sh:NodeShape ;
+    sh:targetClass rdfc-js:Resc ;
+    sh:property [
+        sh:class rdfc:ReaderChannel ;
+        sh:path rdfc-js:rescReader ;
+        sh:name "input" ;
+        sh:maxCount 1
+    ] .

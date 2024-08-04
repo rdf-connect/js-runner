@@ -1,6 +1,5 @@
-import { createTermNamespace } from "@treecg/types";
-
 import { NamedNode, Term } from "@rdfjs/types";
+
 import {
     FileReaderConfig,
     FileWriterConfig,
@@ -31,22 +30,8 @@ import {
     startHttpStreamReader,
     startHttpStreamWriter,
 } from "./connectors/http";
-import { LOG } from "./util";
+import { LOG, RDFC, RDFC_JS } from "./util";
 export * from "./connectors/http";
-
-export const Conn = createTermNamespace(
-    "https://w3id.org/conn#",
-    "FileReaderChannel",
-    "FileWriterChannel",
-    "HttpReaderChannel",
-    "HttpWriterChannel",
-    "KafkaReaderChannel",
-    "KafkaWriterChannel",
-    "WsReaderChannel",
-    "WsWriterChannel",
-    "WriterChannel",
-    "ReaderChannel",
-);
 
 export interface Config<T> {
     id: Term;
@@ -64,13 +49,7 @@ export type WriterConstructor<C> = (config: C) => {
     init: () => Promise<void>;
 };
 
-export const JsOntology = createTermNamespace(
-    "https://w3id.org/conn/js#",
-    "JsProcess",
-    "JsChannel",
-    "JsReaderChannel",
-    "JsWriterChannel",
-);
+
 type JsChannel = {
     channel: {
         id: Term;
@@ -84,21 +63,21 @@ export class ChannelFactory {
 
     createReader(config: Config<unknown>): Stream<string | Buffer> {
         LOG.channel("Creating reader %s: a %s", config.id.value, config.ty.value);
-        if (config.ty.equals(Conn.FileReaderChannel)) {
+        if (config.ty.equals(RDFC.FileReaderChannel)) {
             const { reader, init } = startFileStreamReader(<FileReaderConfig>config.config);
             this.inits.push(init);
 
             return reader;
         }
 
-        if (config.ty.equals(Conn.WsReaderChannel)) {
+        if (config.ty.equals(RDFC.WebSocketReaderChannel)) {
             const { reader, init } = startWsStreamReader(<WsReaderConfig>config.config);
             this.inits.push(init);
 
             return reader;
         }
 
-        if (config.ty.equals(Conn.KafkaReaderChannel)) {
+        if (config.ty.equals(RDFC.KafkaReaderChannel)) {
             const { reader, init } = startKafkaStreamReader(
                 <KafkaReaderConfig>config.config,
             );
@@ -106,7 +85,7 @@ export class ChannelFactory {
             return reader;
         }
 
-        if (config.ty.equals(Conn.HttpReaderChannel)) {
+        if (config.ty.equals(RDFC.HttpReaderChannel)) {
             const { reader, init } = startHttpStreamReader(
                 <HttpReaderConfig>config.config,
             );
@@ -114,7 +93,7 @@ export class ChannelFactory {
             return reader;
         }
 
-        if (config.ty.equals(JsOntology.JsReaderChannel)) {
+        if (config.ty.equals(RDFC_JS.JSReaderChannel)) {
             const c = <JsChannel>config.config;
             if (c.channel) {
                 const id = c.channel.id.value;
@@ -141,7 +120,7 @@ export class ChannelFactory {
 
     createWriter(config: Config<unknown>): Writer<string | Buffer> {
         LOG.channel("Creating writer %s: a %s", config.id.value, config.ty.value);
-        if (config.ty.equals(Conn.FileWriterChannel)) {
+        if (config.ty.equals(RDFC.FileWriterChannel)) {
             const { writer, init } = startFileStreamWriter(
                 <FileWriterConfig>config.config,
             );
@@ -150,7 +129,7 @@ export class ChannelFactory {
             return writer;
         }
 
-        if (config.ty.equals(Conn.WsWriterChannel)) {
+        if (config.ty.equals(RDFC.WebSocketWriterChannel)) {
             const { writer, init } = startWsStreamWriter(
                 <WsWriterConfig>config.config,
             );
@@ -159,7 +138,7 @@ export class ChannelFactory {
             return writer;
         }
 
-        if (config.ty.equals(Conn.KafkaWriterChannel)) {
+        if (config.ty.equals(RDFC.KafkaWriterChannel)) {
             const { writer, init } = startKafkaStreamWriter(
                 <KafkaWriterConfig>config.config,
             );
@@ -167,7 +146,7 @@ export class ChannelFactory {
             return writer;
         }
 
-        if (config.ty.equals(Conn.HttpWriterChannel)) {
+        if (config.ty.equals(RDFC.HttpWriterChannel)) {
             const { writer, init } = startHttpStreamWriter(
                 <HttpWriterConfig>config.config,
             );
@@ -175,7 +154,7 @@ export class ChannelFactory {
             return writer;
         }
 
-        if (config.ty.equals(JsOntology.JsWriterChannel)) {
+        if (config.ty.equals(RDFC_JS.JSWriterChannel)) {
             const c = <JsChannel>config.config;
             if (c.channel) {
                 const id = c.channel.id.value;
