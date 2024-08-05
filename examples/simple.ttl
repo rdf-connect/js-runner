@@ -5,10 +5,10 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
-<> owl:imports <./processor/echo.ttl>,
-    <./processor/send.ttl>,
-    <./processor/resc.ttl>,
-    <./ontology.ttl> .
+<> owl:imports 
+    <../processor/send.ttl>,
+    <../processor/resc.ttl>,
+    <../ontology.ttl> .
 
 [ ] a rdfc-js:JSChannel ;
     rdfc:reader <jr> ;

@@ -52,7 +52,7 @@ describe("Input test", () => {
 
         await load_store({
             type: "remote",
-            location: safeJoin(process.cwd(), "input.ttl")
+            location: safeJoin(process.cwd(), "examples/simple.ttl")
         }, store);
 
         const quads = store.getQuads(null, null, null, null);
