@@ -1,0 +1,26 @@
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#> .
+@prefix rdfc: <https://w3id.org/rdf-connect#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+<> owl:imports 
+    <../processor/send.ttl>,
+    <../processor/resc.ttl>,
+    <../ontology.ttl> .
+
+[ ] a rdfc-js:JSChannel ;
+    rdfc:reader <jr> ;
+    rdfc:writer <jw> .
+
+<jr> a rdfc-js:JSReaderChannel .
+<jw> a rdfc-js:JSWriterChannel .
+
+[ ] a rdfc-js:Send ;
+    rdfc-js:msg "Hello" ;
+    rdfc-js:sendWriter <jw> .
+
+[ ] a rdfc-js:Resc ;
+    rdfc-js:rescReader <jr> .
+

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import * as conn from "../../src/connectors";
 import { WsReaderConfig, WsWriterConfig } from "../../src/connectors/ws";
-import { namedNode } from "../../src/util";
+import { namedNode, RDFC } from "../../src/util";
 
 describe("connector-ws", () => {
     test("Should write -> WebSocket -> read", async () => {
@@ -18,12 +18,12 @@ describe("connector-ws", () => {
         const reader = factory.createReader({
             config: readerConfig,
             id: namedNode("reader"),
-            ty: conn.Conn.WsReaderChannel,
+            ty: RDFC.WebSocketReaderChannel,
         });
         const writer = factory.createWriter({
             config: writerConfig,
             id: namedNode("writer"),
-            ty: conn.Conn.WsWriterChannel,
+            ty: RDFC.WebSocketWriterChannel,
         });
         const items: unknown[] = [];
         reader.data((x) => {

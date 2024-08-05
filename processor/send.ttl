@@ -1,40 +1,41 @@
-@prefix js: <https://w3id.org/conn/js#>.
-@prefix fno: <https://w3id.org/function/ontology#>.
-@prefix fnom: <https://w3id.org/function/vocabulary/mapping#>.
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
-@prefix : <https://w3id.org/conn#>.
-@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#> .
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#> .
+@prefix fno: <https://w3id.org/function/ontology#> .
+@prefix fnom: <https://w3id.org/function/vocabulary/mapping#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
 
-js:Send a js:JsProcess;
-  js:file <./test.js>;
-  js:function "send";
-  js:location <./>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "msg";
-      fnom:implementationParameterPosition "0"^^xsd:int;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "output";
-      fnom:implementationParameterPosition "1"^^xsd:int;
-    ];
-  ].
+rdfc-js:Send a rdfc-js:Processor ;
+    rdfc-js:file <./test.js> ;
+    rdfc-js:function "send" ;
+    rdfc-js:location <./> ;
+    rdfc-js:mapping [
+        a fno:Mapping ;
+        fno:parameterMapping [
+            a fnom:PositionParameterMapping ;
+            fnom:functionParameter "msg" ;
+            fnom:implementationParameterPosition "0"^^xsd:integer
+        ], [
+            a fnom:PositionParameterMapping ;
+            fnom:functionParameter "output" ;
+            fnom:implementationParameterPosition "1"^^xsd:integer
+        ]
+    ] ;
+    rdfc:executedBy rdfc-js:Runner .
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:Send;
-  sh:property [
-    sh:datatype xsd:string;
-    sh:path js:msg;
-    sh:name "msg";
-    sh:maxCount 1;
-    sh:minCount 1;
-  ], [
-    sh:class :WriterChannel;
-    sh:path js:sendWriter;
-    sh:name "output";
-    sh:maxCount 1;
-    sh:minCount 1;
-  ].
+    sh:targetClass rdfc-js:Send ;
+    sh:property [
+        sh:datatype xsd:string ;
+        sh:path rdfc-js:msg ;
+        sh:name "msg" ;
+        sh:maxCount 1 ;
+        sh:minCount 1
+    ], [
+        sh:class rdfc:WriterChannel ;
+        sh:path rdfc-js:sendWriter ;
+        sh:name "output" ;
+        sh:maxCount 1 ;
+        sh:minCount 1
+    ] .
 

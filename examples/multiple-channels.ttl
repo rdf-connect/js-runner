@@ -1,0 +1,85 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfc: <https://w3id.org/rdf-connect#> .
+@prefix rdfc-js: <https://w3id.org/rdf-connect/js#> .
+
+#################################
+## Entity definitions
+#################################
+
+<> owl:imports 
+    <../processor/echo.ttl>,
+    <../processor/send.ttl>,
+    <../processor/resc.ttl>,
+    <../ontology.ttl> .
+
+#################################
+## Channels
+#################################
+
+# JS in-memory channel
+[ ] a rdfc-js:JSChannel ;
+    rdfc:reader <jr> ;
+    rdfc:writer <jw> .
+<jr> a rdfc-js:JSReaderChannel .
+<jw> a rdfc-js:JSWriterChannel .
+
+# HTTP channel
+[ ] a rdfc:HttpChannel ;
+    rdfc:reader <hr> ;
+    rdfc:writer <hw> .
+<hr> a rdfc:HttpReaderChannel ;
+    rdfc:httpPort 8081 .
+<hw> a rdfc:HttpWriterChannel ;
+    rdfc:httpEndpoint "http://localhost:8081" ;
+    rdfc:httpMethod "POST" .
+
+# WebSocket channel
+[ ] a rdfc:WebSocketChannel ;
+    rdfc:reader <wsr> ;
+    rdfc:writer <wsw> .
+<wsr> a rdfc:WebSocketReaderChannel ;
+    rdfc:wsPort 8083 ;
+    rdfc:wsHost "localhost" .
+<wsw> a rdfc:WebSocketWriterChannel ;
+    rdfc:wsUrl "ws://localhost:8083" .
+
+# File channel
+[ ] a rdfc:FileChannel ;
+    rdfc:reader <fr> ;
+    rdfc:writer <fw> .
+<fr> a rdfc:FileReaderChannel ;
+    rdfc:filePath "../examples/file.txt" ;
+    rdfc:fileOnReplace true .
+<fw> a rdfc:FileWriterChannel ;
+    rdfc:filePath "../examples/file.txt" ;
+    rdfc:fileOnReplace true .
+
+#################################
+## Processors
+#################################
+
+# Send message
+[ ] a rdfc-js:Send ;
+    rdfc-js:msg "RDF-Connect says: " ;
+    rdfc-js:sendWriter <jw> .
+
+# Echo 1
+[ ] a rdfc-js:Echo ;
+    rdfc-js:input <jr> ;
+    rdfc-js:output <hw> .
+
+# Echo 2
+[ ] a rdfc-js:Echo ;
+    rdfc-js:input <hr> ;
+    rdfc-js:output <wsw> .
+
+# Echo 3
+[ ] a rdfc-js:Echo ;
+    rdfc-js:input <wsr> ;
+    rdfc-js:output <fw> .
+
+# Write to console
+[ ] a rdfc-js:Resc ;
+    rdfc-js:rescReader <fr> .

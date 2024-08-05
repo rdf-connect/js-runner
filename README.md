@@ -6,12 +6,12 @@ Typescript/Javascript executor for an [RDF-Connect](https://rdf-connect.github.i
 
 ## Process definition
 
-Each js process must have `js:file`, `js:function` and `js:mapping` objects.
+Each js process must have `rdfc-js:file`, `rdfc-js:function` and `rdfc-js:mapping` objects.
 
-- `js:file` points to the location of the main javascript file, containing the function.
-- `js:location` points to the starting location for `js:file` relative from the current file.
-- `js:function` points to the function name in the file.
-- `js:mapping` is a `fno:Mapping` object that links properties to function arguments.
+- `rdfc-js:file` points to the location of the main javascript file, containing the function.
+- `rdfc-js:location` points to the starting location for `js:file` relative from the current file.
+- `rdfc-js:function` points to the function name in the file.
+- `rdfc-js:mapping` is a `fno:Mapping` object that links properties to function arguments.
 
 When you declare a new js process, it is required to add a SHACL shape.
 Each `sh:property` is accounted for, noting the type `sh:class` or `sh:datatype`.
@@ -22,9 +22,9 @@ Example definitions are available in `processor/configs/*.ttl`.
 
 In a js pipeline you can use all declared js processes, as defined in their SHACL shapes.
 
-An example can be found in `input.ttl`, here a `js:Send` process and a `js:Resc` process are defined.
-`js:Send` takes in a message to send, and a channel to send it to.
-`js:Resc` only takes a channel to read from.
+An example can be found in `input.ttl`, here a `rdfc-js:Send` process and a `rdfc-js:Resc` process are defined.
+`rdfc-js:Send` takes in a message to send, and a channel to send it to.
+`rdfc-js:Resc` only takes a channel to read from.
 
 (implementation can be found in `procossor/test.js`)
 

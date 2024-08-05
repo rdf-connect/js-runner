@@ -1,4 +1,6 @@
 
+examples/file.txt
+
 bin/bundle.mjs
 # Outputs
 lib

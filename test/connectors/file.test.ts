@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { writeFile } from "fs/promises";
 import { FileReaderConfig, FileWriterConfig } from "../../src/connectors/file";
 import * as conn from "../../src/connectors";
-import { namedNode } from "../../src/util";
+import { namedNode, RDFC } from "../../src/util";
 
 describe("File Channel", () => {
     test("Reader - Writer", async () => {
@@ -25,7 +25,7 @@ describe("File Channel", () => {
         const reader = factory.createReader({
             config,
             id: namedNode("reader"),
-            ty: conn.Conn.FileReaderChannel,
+            ty: RDFC.FileReaderChannel,
         });
         expect(reader).toBeInstanceOf(conn.SimpleStream);
 
@@ -36,7 +36,7 @@ describe("File Channel", () => {
         const writer = factory.createWriter({
             config: writerConfig,
             id: namedNode("writer"),
-            ty: conn.Conn.FileWriterChannel,
+            ty: RDFC.FileWriterChannel,
         });
         await factory.init();
         await writer.push("Number 1 " + Math.random());
