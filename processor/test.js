@@ -28,7 +28,7 @@ export async function send(msg, writer) {
         });
     });
 
-    return () => writer.push("Hallo!");
+    return () => writer.push(`${msg} Hallo!`);
 }
 
 export function resc(reader) {
