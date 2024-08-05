@@ -34,3 +34,13 @@ export async function send(msg, writer) {
 export function resc(reader) {
     reader.data((x) => console.log("data", x));
 }
+
+export async function echo(inputChannel, outputChannel) {
+    inputChannel.data(async (x) => {
+        await outputChannel.push(x);
+    });
+    inputChannel.on("end", async () => { await outputChannel.end(); });
+    if (inputChannel.lastElement) {
+        await outputChannel.push(inputChannel.lastElement);
+    }
+}
