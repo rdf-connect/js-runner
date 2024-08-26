@@ -1,6 +1,6 @@
 # Js-runner
 
-[![Bun CI](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml/badge.svg)](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/@rdfc/js-runner.svg?style=popout)](https://npmjs.com/package/@rdfc/js-runner)
+[![Build and tests with Node.js](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml/badge.svg)](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/@rdfc/js-runner.svg?style=popout)](https://npmjs.com/package/@rdfc/js-runner)
 
 Typescript/Javascript executor for an [RDF-Connect](https://rdf-connect.github.io/rdfc.github.io/) pipeline. Starting from a declarative RDF file describing the pipeline.
 
@@ -34,7 +34,7 @@ You can execute this pipeline with
 
 ```bash
 tsc
-bun bin/js-runner.js input.ttl 
+npx bin/js-runner.js input.ttl 
 ```
 
 This example input configuration file uses `owl:imports` to specify additional configuration files.
