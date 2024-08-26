@@ -101,7 +101,9 @@ export const startHttpStreamWriter: WriterConstructor<HttpWriterConfig> = (
 ) => {
     const requestConfig = <https.RequestOptions>new URL(config.endpoint);
 
-    const push = async (item: string | Buffer): Promise<void> => {
+    const writer = new SimpleStream<string | Buffer>();
+
+    writer.push = async (item: string | Buffer): Promise<void> => {
         await new Promise((resolve) => {
             const options = {
                 hostname: requestConfig.hostname,
@@ -125,7 +127,5 @@ export const startHttpStreamWriter: WriterConstructor<HttpWriterConfig> = (
         });
     };
 
-    const end = async (): Promise<void> => {};
-
-    return { writer: { push, end }, init: async () => {} };
+    return { writer, init: async () => {} };
 };

@@ -223,6 +223,7 @@ export class ChannelFactory {
 export interface Writer<T> {
     push(item: T): Promise<void>;
     end(): Promise<void>;
+    on(event: "end", listener: Handler<void>): this;
 }
 
 export interface Stream<T> {
@@ -242,6 +243,8 @@ export class SimpleStream<T> implements Stream<T> {
     public readonly disconnect: () => Promise<void>;
     public lastElement?: T | undefined;
 
+    private ended = false;
+
     public constructor(onDisconnect?: () => Promise<void>) {
         this.disconnect = onDisconnect || (async () => {});
     }
@@ -252,6 +255,9 @@ export class SimpleStream<T> implements Stream<T> {
     }
 
     public async push(data: T): Promise<void> {
+        if (this.ended) {
+            throw new Error("Trying to push to a stream that has ended!");
+        }
         this.lastElement = data;
         await Promise.all(this.dataHandlers.map((handler) => handler(data)));
     }
@@ -259,6 +265,7 @@ export class SimpleStream<T> implements Stream<T> {
     public async end(): Promise<void> {
         await this.disconnect();
         await Promise.all(this.endHandlers.map((handler) => handler()));
+        this.ended = true;
     }
 
     public on(event: "data", listener: Handler<T>): this;

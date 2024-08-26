@@ -94,14 +94,14 @@ export const startWsStreamWriter: WriterConstructor<WsWriterConfig> = (
         ws.on("open", () => console.log("open"));
     };
 
+    const writer = new SimpleStream<string>(async () => {
+        ws.close();
+    });
+
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const push = async (item: any): Promise<void> => {
+    writer.push = async (item: any): Promise<void> => {
         ws.send(item);
     };
 
-    const end = async (): Promise<void> => {
-        ws.close();
-    };
-
-    return { writer: { push, end }, init };
+    return { writer, init };
 };
