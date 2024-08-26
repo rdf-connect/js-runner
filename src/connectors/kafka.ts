@@ -138,15 +138,16 @@ export const startKafkaStreamWriter: WriterConstructor<KafkaWriterConfig> = (
     const kafka = new Kafka(<KafkaConfig>brokerConfig);
 
     const producer = kafka.producer(config.producer);
+
+    const writer = new SimpleStream<string>(async () => {
+        await producer.disconnect();
+    });
+
     const init = () => producer.connect();
 
-    const push = async (item: string): Promise<void> => {
+    writer.push = async (item: string): Promise<void> => {
         await producer.send({ topic, messages: [{ value: item }] });
     };
 
-    const end = async (): Promise<void> => {
-        await producer.disconnect();
-    };
-
-    return { writer: { push, end }, init };
+    return { writer, init };
 };

@@ -121,13 +121,15 @@ export const startFileStreamWriter: WriterConstructor<FileWriterConfig> = (
         : `${process.cwd()}/${config.path}`;
     const encoding: BufferEncoding = <BufferEncoding>config.encoding || "utf-8";
 
+    const writer = new SimpleStream<string>();
+
     const init = async () => {
         if (!config.onReplace) {
             await writeFile(path, "", { encoding });
         }
     };
 
-    const push = async (item: string): Promise<void> => {
+    writer.push = async (item: string): Promise<void> => {
         if (config.onReplace) {
             await writeFile(path, item, { encoding });
         } else {
@@ -135,7 +137,5 @@ export const startFileStreamWriter: WriterConstructor<FileWriterConfig> = (
         }
     };
 
-    const end = async (): Promise<void> => {};
-
-    return { writer: { push, end }, init };
+    return { writer, init };
 };
