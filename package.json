@@ -19,8 +19,7 @@
     "js-runner": "bin/bundle.mjs"
   },
   "scripts": {
-    "build": "tsc && tsc-alias && rollup ./dist/index.js --file ./dist/index.cjs --format cjs && bun build --external debug ./bin/js-runner.js --outfile bin/bundle.mjs --target node && npm run build:recompose",
-    "build:recompose": "sed -z 's/var __require = (id) => {\\n  return import.meta.require(id);\\n};/import Module from \"node:module\";\\nconst __require = Module.createRequire(import.meta.url);/' -i bin/bundle.mjs",
+    "build": "tsc && tsc-alias",
     "watch": "tsc -w",
     "test": "vitest run --coverage --coverage.include src",
     "prepare": "husky",

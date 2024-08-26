@@ -1,23 +1,24 @@
-name: Build & Test with Bun
+name: Build and tests with Node.js
 
 on:
-    push:
-        branches: [ master ]
-    pull_request:
-        branches: [ master ]
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-        - name: Checkout 
-          uses: actions/checkout@v3 # Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v3
 
-        - name: Setup Bun
-          uses: oven-sh/setup-bun@v1 # Setup bun
-          with:
-            bun-version: latest
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 21.x
+          cache: "npm"
 
-        - run: bun i # Install dependencies
-        - run: bun test # Run tests
-
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test
