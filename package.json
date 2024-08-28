@@ -1,6 +1,6 @@
 {
   "name": "@rdfc/js-runner",
-  "version": "0.2.2",
+  "version": "1.0.0-alpha.0",
   "type": "module",
   "exports": {
     "import": "./dist/index.js",
