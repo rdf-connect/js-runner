@@ -9,38 +9,39 @@ import { FlatCompat } from "@eslint/eslintrc";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
+    baseDirectory: __dirname,
+    recommendedConfig: js.configs.recommended,
+    allConfig: js.configs.all,
 });
 
 export default [
-  {
-    ignores: ["**/dist", "**/node_modules"],
-  },
-  ...compat.extends(
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "prettier",
-  ),
-  {
-    plugins: {
-      "@typescript-eslint": typescriptEslint,
+    {
+        ignores: ["**/dist", "**/node_modules", "bin/bundle.mjs"],
     },
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-      },
-      parser: tsParser,
-      ecmaVersion: "latest",
-      sourceType: "module",
+    ...compat.extends(
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "prettier",
+    ),
+    {
+        plugins: {
+            "@typescript-eslint": typescriptEslint,
+        },
+        languageOptions: {
+            globals: {
+                // ...globals.browser,
+                ...globals.node,
+            },
+            parser: tsParser,
+            ecmaVersion: "latest",
+            sourceType: "module",
+        },
+        rules: {
+            indent: ["error", 4],
+            "linebreak-style": ["error", "unix"],
+            quotes: ["error", "double"],
+            semi: ["error", "always"],
+            "@typescript-eslint/no-unused-vars": "warn",
+        },
     },
-    rules: {
-      indent: ["error", 4],
-      "linebreak-style": ["error", "unix"],
-      quotes: ["error", "double"],
-      semi: ["error", "always"],
-      "@typescript-eslint/no-unused-vars": "warn",
-    },
-  },
 ];
