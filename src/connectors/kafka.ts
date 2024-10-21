@@ -93,9 +93,7 @@ export const startKafkaStreamReader: ReaderConstructor<KafkaReaderConfig> = (
                 }) {
                     if (topic === config.topic.name) {
                         const element = message.value?.toString() ?? "";
-                        stream.push(element).catch((error) => {
-                            throw error;
-                        });
+                        await stream.push(element);
                     }
                 },
             })
