@@ -119,13 +119,19 @@ describe("test existing processors", () => {
             type: "memory",
         };
 
-        const {
-            processors,
-            quads,
-            shapes: config,
-        } = await extractProcessors(source);
+        // JS-runner only loads sources once, so yeah
+        const source2: Source = {
+            value,
+            baseIRI: baseIRI + 2,
+            type: "memory",
+        };
 
-        test("Env default value", () => {
+        test("Env default value", async () => {
+            const {
+                processors,
+                quads,
+                shapes: config,
+            } = await extractProcessors(source);
             const proc = processors.find((x) => x.ty.value === JS + "Send");
             expect(proc).toBeDefined();
 
@@ -141,8 +147,16 @@ describe("test existing processors", () => {
             expect(writer.ty).toBeDefined();
         });
 
-        test("Env value", () => {
+        test("Env value", async () => {
             process.env["msg"] = "FROM ENV";
+            const {
+                processors,
+                quads,
+                shapes: config,
+            } = await extractProcessors(source2);
+
+            console.log(quads);
+
             const proc = processors.find((x) => x.ty.value === JS + "Send");
             expect(proc).toBeDefined();
 
