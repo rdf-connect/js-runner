@@ -16,7 +16,7 @@
   ],
   "types": "./dist/index.d.ts",
   "bin": {
-    "js-runner": "bin/bundle.mjs"
+    "js-runner": "bin/js-runner.js"
   },
   "scripts": {
     "build": "tsc && tsc-alias",
