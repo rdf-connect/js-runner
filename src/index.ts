@@ -6,7 +6,7 @@ import { RDF } from "@treecg/types";
 import { ChannelFactory, Conn, JsOntology } from "./connectors";
 import { Quad, Term } from "@rdfjs/types";
 
-import { extractShapes, Shapes } from "rdf-lens";
+import { envReplace, extractShapes, Shapes } from "rdf-lens";
 
 export * from "./connectors";
 
@@ -58,10 +58,11 @@ export async function extractProcessors(
         )
         .map((x) => x.subject);
     const processorLens = config.lenses[JsOntology.JsProcess.value];
-    const processors = subjects.map((id) =>
-        processorLens.execute({ id, quads }),
+    const processors: Processor[] = subjects.map(
+        (id) => <any>processorLens.execute({ id, quads }),
     );
-    return { processors, quads, shapes: config };
+    const newQuads = envReplace().execute(quads);
+    return { processors, quads: newQuads, shapes: config };
 }
 
 export function extractSteps(
@@ -82,7 +83,7 @@ export function extractSteps(
     const fields = proc.mapping.parameters;
 
     for (const id of subjects) {
-        const obj = processorLens.execute({ id, quads });
+        const obj = <any>processorLens.execute({ id, quads });
         const functionArgs = new Array(fields.length);
 
         for (const field of fields) {
