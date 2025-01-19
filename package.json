@@ -29,7 +29,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@rdfjs/types": "^1.1.2",
+    "@rdfjs/types": "^2.0.1",
     "@treecg/types": "^0.4.6",
     "command-line-args": "^6.0.1",
     "command-line-usage": "^7.0.3",
