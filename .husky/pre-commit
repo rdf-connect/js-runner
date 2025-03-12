@@ -1,0 +1,6 @@
+echo Husky format!
+npm run format
+echo Husky Lint!
+npm run lint
+echo Husky Test!
+npm test

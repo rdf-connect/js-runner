@@ -1,0 +1,66 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix ex: <http://example.org/>.
+@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+@prefix rdfl: <https://w3id.org/rdf-lens/ontology#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect/ontology#>.
+
+<> owl:imports <../../index.ttl>.
+
+rdfc:EchoProcessor a rdfc:JsProcessor;
+  rdfc:entrypoint <./>;
+  rdfc:file <./lib/processors.js>;
+  rdfc:class "EchoProcessor".
+
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:EchoProcessor;
+  sh:property [
+    sh:path rdfc:reader;
+    sh:name "reader";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Reader;
+  ], [
+    sh:path rdfc:writer;
+    sh:name "writer";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Writer;
+  ].
+
+rdfc:LogProcessor a rdfc:JsProcessor;
+  rdfc:entrypoint <./>;
+  rdfc:file <./lib/processors.js>;
+  rdfc:class "LogProcessor".
+
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:LogProcessor;
+  sh:property [
+    sh:path rdfc:reader;
+    sh:name "reader";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Reader;
+  ].
+
+rdfc:SendProcessor a rdfc:JsProcessor;
+  rdfc:entrypoint <./>;
+  rdfc:file <./lib/processors.js>;
+  rdfc:class "SendProcessor".
+
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:SendProcessor;
+  sh:property [
+    sh:path rdfc:writer;
+    sh:name "writer";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Writer;
+  ], [
+    sh:path rdfc:msg;
+    sh:name "msgs";
+    sh:datatype xsd:string;
+  ].
+

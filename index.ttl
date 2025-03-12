@@ -1,0 +1,33 @@
+@prefix ex: <http://example.org/>.
+@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+@prefix rdfl: <https://w3id.org/rdf-lens/ontology#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect/ontology#>.
+
+rdfc:JsRunner a rdfc:CommandRunner;
+  rdfc:handles rdfc:JsProcessor;
+  rdfc:command "node node_modules/@rdfc/js-runner/bin/runner.js";
+  rdfc:processor_definition <JsProcessorShape>.
+
+[ ] a sh:NodeShape;
+  sh:targetClass <JsProcessorShape>;
+  sh:property [
+    sh:path rdfc:entrypoint;
+    sh:name "location";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:datatype xsd:iri;
+  ], [
+    sh:path rdfc:file;
+    sh:name "file";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+  ], [
+    sh:path rdfc:class;
+    sh:name "clazz";
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+  ].

@@ -1,0 +1,22 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect/ontology#>.
+
+<> owl:imports <./processors.ttl>.
+<> a rdfc:Pipeline;
+  rdfc:dependency <>;
+  rdfc:processor <sender>, <echo>, <log>;
+  rdfc:runner rdfc:JsRunner.
+
+<1> a rdfc:Writer, rdfc:Reader.
+<2> a rdfc:Writer, rdfc:Reader.
+<sender> a rdfc:SendProcessor;
+  rdfc:writer <1>;
+  rdfc:msg "hallo", "world".
+
+<echo> a rdfc:EchoProcessor;
+  rdfc:reader <1>;
+  rdfc:writer <2>.
+
+<log> a rdfc:LogProcessor;
+  rdfc:reader <2>.
+
