@@ -130,7 +130,7 @@ export class Runner {
       }
 
       for (const writer of this.writers[uri] || []) {
-        await writer.close()
+        await writer.close(true)
       }
     }
   }

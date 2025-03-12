@@ -25,18 +25,28 @@ export async function start(addr: string, uri: string) {
 
   await writable({ identify: { uri } })
 
-  for await (const chunk of stream) {
-    const msg: RunnerMessage = chunk
-    if (msg.proc) {
-      await runner.addProcessor(msg.proc)
-    }
-    if (msg.start) {
-      runner.start()
+  let processorsEnd!: (v: unknown) => unknown
+  const processorsEnded = new Promise((res) => (processorsEnd = res))
+  ;(async () => {
+    for await (const chunk of stream) {
+      const msg: RunnerMessage = chunk
+      if (msg.proc) {
+        await runner.addProcessor(msg.proc)
+      }
+      if (msg.start) {
+        runner.start().then(processorsEnd)
+      }
+
+      await runner.handleOrchMessage(msg)
     }
 
-    await runner.handleOrchMessage(msg)
-  }
+    logger.error('Stream ended')
+  })()
 
-  stream.cancel()
+  await processorsEnded
+
+  logger.info('All processors are finished')
   stream.end()
+  client.close()
+  process.exit(0)
 }

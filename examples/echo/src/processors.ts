@@ -6,9 +6,10 @@ type EchoArgs = {
 }
 
 export class EchoProcessor extends Processor<EchoArgs> {
+  private promise!: Promise<unknown>
   async init(this: this & EchoArgs): Promise<void> {
     this.logger.info('Init echo processor')
-    this.setup()
+    this.promise = this.setup()
   }
 
   async setup(this: this & EchoArgs) {
@@ -22,6 +23,7 @@ export class EchoProcessor extends Processor<EchoArgs> {
 
   async start(this: this & EchoArgs): Promise<void> {
     this.logger.info('starting')
+    await this.promise
   }
 }
 
@@ -30,9 +32,10 @@ type LogArgs = {
 }
 
 export class LogProcessor extends Processor<LogArgs> {
+  private promise!: Promise<unknown>
   async init(): Promise<void> {
     this.logger.info('Init log processor')
-    this.setup()
+    this.promise = this.setup()
   }
 
   async setup() {
@@ -45,6 +48,7 @@ export class LogProcessor extends Processor<LogArgs> {
 
   async start(): Promise<void> {
     this.logger.info('Start log processor')
+    await this.promise
   }
 }
 
@@ -62,7 +66,7 @@ export class SendProcessor extends Processor<SendArgs> {
     for (const msg of this.get('msgs')) {
       await this.get('writer').string(msg)
       this.logger.info('Sending ' + msg)
-      await new Promise((res) => setTimeout(res, 2000))
+      await new Promise((res) => setTimeout(res, 1000))
     }
     await this.get('writer').close()
     this.logger.info('Closed')

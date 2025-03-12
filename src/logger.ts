@@ -20,14 +20,19 @@ export class RpcTransport extends Transport {
   }
 
   log(info: winston.LogEntry, callback: () => void) {
-    this.stream.write(
-      {
-        msg: info.message,
-        level: info.level,
-        entities: this.entities,
-        aliases: this.aliases,
-      },
-      callback,
-    )
+    if (!this.stream.closed) {
+      this.stream.write(
+        {
+          msg: info.message,
+          level: info.level,
+          entities: this.entities,
+          aliases: this.aliases,
+        },
+        callback,
+      )
+    } else {
+      console.log('Output stream closed')
+      callback()
+    }
   }
 }

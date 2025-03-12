@@ -65,10 +65,12 @@ export class WriterInstance implements Writer {
     })
   }
 
-  async close(): Promise<void> {
+  async close(issued = false): Promise<void> {
     this.logger.debug(`${this.uri} closes stream`)
-    await this.write({
-      close: { channel: this.uri },
-    })
+    if (!issued) {
+      await this.write({
+        close: { channel: this.uri },
+      })
+    }
   }
 }
