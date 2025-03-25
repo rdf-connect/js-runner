@@ -37,6 +37,7 @@ export class Runner {
   private readonly uri: string
 
   private readonly processors: Proc<unknown>[] = []
+  private readonly processorTransforms: Promise<unknown>[] = []
 
   constructor(
     client: RunnerClient,
@@ -102,10 +103,12 @@ export class Runner {
     await this.write({ init: { uri: proc.uri } })
 
     this.processors.push(instance)
+    this.processorTransforms.push(instance.transform())
   }
 
   async start() {
-    await Promise.all(this.processors.map((x) => x.start()))
+    await Promise.all(this.processors.map((x) => x.produce()))
+    await Promise.all(this.processorTransforms)
   }
 
   async handleOrchMessage(msg: OrchestratorMessage) {

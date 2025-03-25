@@ -29,6 +29,12 @@ class TestClient extends RunnerClient {
   }
 }
 
+async function one<T>(iter: AsyncIterable<T>): Promise<T | undefined> {
+  for await (const item of iter) {
+    return item;
+  }
+}
+
 describe('Reader', async () => {
   const client = new TestClient()
   const uri = 'someUri'
@@ -39,23 +45,21 @@ describe('Reader', async () => {
   test('handles string', async () => {
     const reader = new ReaderInstance(uri, client, logger)
 
-    const promise = reader.string()
+    const promise = one(reader.strings())
     reader.handleMsg({ data: encoder.encode('Hello world'), channel: uri })
     const out = await promise
 
     expect(out).toEqual('Hello world')
-    expect((<{ onces: unknown[] }>(<unknown>reader))['onces'].length).toBe(0)
   })
 
   test('handles closed string', async () => {
     const reader = new ReaderInstance(uri, client, logger)
 
-    const promise = reader.string()
+    const promise = one(reader.strings())
     reader.close()
     const out = await promise
 
     expect(out).toEqual(undefined)
-    expect((<{ onces: unknown[] }>(<unknown>reader))['onces'].length).toBe(0)
   })
 
   test('handles strings', async () => {
@@ -81,31 +85,29 @@ describe('Reader', async () => {
     const reader = new ReaderInstance(uri, client, logger)
 
     const data = encoder.encode('Hello world')
-    const promise = reader.buffer()
+    const promise = one(reader.buffers())
     reader.handleMsg({ data, channel: uri })
     const out = await promise
 
     expect(out).toEqual(data)
-    expect((<{ onces: unknown[] }>(<unknown>reader))['onces'].length).toBe(0)
   })
 
   test('handles buffers', async () => {
     const reader = new ReaderInstance(uri, client, logger)
 
     const data = encoder.encode('Hello world')
-    const promise = reader.buffer()
+    const promise = one(reader.buffers())
     reader.handleMsg({ data, channel: uri })
     const out = await promise
 
     expect(out).toEqual(data)
-    expect((<{ onces: unknown[] }>(<unknown>reader))['onces'].length).toBe(0)
   })
 
   test('handles stream', async () => {
     const reader = new ReaderInstance(uri, client, logger)
 
     const nextStream = client.nextStream()
-    const promise = reader.stream()
+    const promise = one(reader.streams())
     reader.handleStreamingMessage({ id: { id: 5 }, channel: uri })
     const stream = await nextStream
 

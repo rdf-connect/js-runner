@@ -9,7 +9,7 @@
 
 <> owl:imports <../../index.ttl>.
 
-rdfc:EchoProcessor a rdfc:JsProcessor;
+rdfc:EchoProcessor a rdfc:JsProcessor, owl:Class;
   rdfc:entrypoint <./>;
   rdfc:file <./lib/processors.js>;
   rdfc:class "EchoProcessor".

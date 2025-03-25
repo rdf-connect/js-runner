@@ -21,10 +21,19 @@ export abstract class Processor<T> {
     this.logger = logger
   }
 
-  get<K extends keyof T>(key: K): T[K] {
+  protected get<K extends keyof T>(key: K): T[K] {
     return this.args[key]
   }
 
+  // This is the first function that is called (and awaited), when creating a processor
+  // This is the perfect location to start things like database connections
   abstract init(this: T & this): Promise<void>
-  abstract start(this: T & this): Promise<void>
+
+  // Function to start reading channels
+  // This function is called for each processor before _produce_ is called
+  abstract transform(this: T & this): Promise<void>
+
+  // Function to start the production of data, starting the pipeline
+  // This function is called after all processors are completely setup
+  abstract produce(this: T & this): Promise<void>
 }
