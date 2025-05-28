@@ -46,7 +46,7 @@
     "@types/command-line-args": "^5.2.3",
     "@types/command-line-usage": "^5.0.4",
     "@types/debug": "^4.1.12",
-    "@types/n3": "^1.24.3",
+    "@types/n3": "^1.25.0",
     "@types/node": "^22.15.21",
     "@types/ws": "^8.18.1",
     "rollup": "^4.41.1",
