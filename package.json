@@ -47,7 +47,7 @@
     "@types/command-line-usage": "^5.0.4",
     "@types/debug": "^4.1.12",
     "@types/n3": "^1.26.0",
-    "@types/node": "^22.15.34",
+    "@types/node": "^22.16.0",
     "@types/ws": "^8.18.1",
     "rollup": "^4.44.1",
     "@typescript-eslint/eslint-plugin": "^8.35.1",
