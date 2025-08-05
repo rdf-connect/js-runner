@@ -2,16 +2,30 @@ import { ClientReadableStream } from '@grpc/grpc-js'
 import { DataChunk, Message, RunnerClient, StreamMessage } from '@rdfc/proto'
 import winston from 'winston'
 import {
+  AnyConvertor,
   Convertor,
   NoConvertor,
   StreamConvertor,
   StringConvertor,
 } from './convertor'
 
+export type Any =
+  | {
+      string: string
+    }
+  | {
+      stream: AsyncGenerator<Uint8Array>
+    }
+  | {
+      buffer: Uint8Array
+    }
+
 export interface Reader {
+  readonly uri: string
   strings(): AsyncIterable<string>
   streams(): AsyncIterable<AsyncGenerator<Uint8Array>>
   buffers(): AsyncIterable<Uint8Array>
+  anys(): AsyncIterable<Any>
 }
 
 class MyIter<T> implements AsyncIterable<T> {
@@ -77,7 +91,7 @@ class MyIter<T> implements AsyncIterable<T> {
 
 export class ReaderInstance implements Reader {
   private client: RunnerClient
-  private uri: string
+  readonly uri: string
   private logger: winston.Logger
 
   private iterators: MyIter<unknown>[] = []
@@ -86,6 +100,12 @@ export class ReaderInstance implements Reader {
     this.uri = uri
     this.client = client
     this.logger = logger
+  }
+
+  anys(): AsyncIterable<Any> {
+    const iter = new MyIter(AnyConvertor)
+    this.iterators.push(iter)
+    return iter
   }
 
   strings(): AsyncIterable<string> {

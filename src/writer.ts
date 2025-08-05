@@ -1,9 +1,11 @@
 import { Id, OrchestratorMessage, RunnerClient } from '@rdfc/proto'
 import { promisify } from 'util'
 import { Logger } from 'winston'
+import { Any } from './reader'
 
 type Writable = (msg: OrchestratorMessage) => Promise<unknown>
 export interface Writer {
+  readonly uri: string
   buffer(buffer: Uint8Array): Promise<void>
 
   stream(buffer: AsyncIterable<Uint8Array>): Promise<void>
@@ -13,11 +15,12 @@ export interface Writer {
   ): Promise<void>
 
   string(buffer: string): Promise<void>
+  any(any: Any): Promise<void>
   close(): Promise<void>
 }
 const encoder = new TextEncoder()
 export class WriterInstance implements Writer {
-  private readonly uri: string
+  readonly uri: string
   private readonly client: RunnerClient
   private readonly write: Writable
   private readonly logger: Logger
@@ -32,6 +35,17 @@ export class WriterInstance implements Writer {
     this.write = write
     this.uri = uri
     this.logger = logger
+  }
+  async any(any: Any): Promise<void> {
+    if ('stream' in any) {
+      await this.stream(any.stream)
+    }
+    if ('buffer' in any) {
+      await this.buffer(any.buffer)
+    }
+    if ('string' in any) {
+      await this.string(any.string)
+    }
   }
 
   async buffer(buffer: Uint8Array): Promise<void> {

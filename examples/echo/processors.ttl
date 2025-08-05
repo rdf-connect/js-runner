@@ -5,11 +5,27 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix sh: <http://www.w3.org/ns/shacl#>.
-@prefix rdfc: <https://w3id.org/rdf-connect/ontology#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
 
 <> owl:imports <../../index.ttl>.
+rdfc:Test rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:entrypoint <./>;
+  rdfc:file <./lib/processors.js>;
+  rdfc:class "TestProcessor".
 
-rdfc:EchoProcessor a rdfc:JsProcessor, owl:Class;
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:Test;
+  sh:property [
+    sh:path rdfc:path;
+    sh:name "path";
+    sh:class rdfl:Path;
+  ], [
+    sh:path rdfc:cbd;
+    sh:name "cbd";
+    sh:class rdfl:CBD;
+  ].
+
+rdfc:EchoProcessor rdfc:jsImplementationOf rdfc:Processor;
   rdfc:entrypoint <./>;
   rdfc:file <./lib/processors.js>;
   rdfc:class "EchoProcessor".
@@ -30,7 +46,7 @@ rdfc:EchoProcessor a rdfc:JsProcessor, owl:Class;
     sh:class rdfc:Writer;
   ].
 
-rdfc:LogProcessor a rdfc:JsProcessor;
+rdfc:LogProcessor rdfc:jsImplementationOf rdfc:Processor;
   rdfc:entrypoint <./>;
   rdfc:file <./lib/processors.js>;
   rdfc:class "LogProcessor".
@@ -45,7 +61,7 @@ rdfc:LogProcessor a rdfc:JsProcessor;
     sh:class rdfc:Reader;
   ].
 
-rdfc:SendProcessor a rdfc:JsProcessor;
+rdfc:SendProcessor rdfc:jsImplementationOf rdfc:Processor;
   rdfc:entrypoint <./>;
   rdfc:file <./lib/processors.js>;
   rdfc:class "SendProcessor".

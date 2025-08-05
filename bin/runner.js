@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { start } from '../lib/client.js'
 
 const host = process.argv[2]

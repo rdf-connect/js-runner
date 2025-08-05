@@ -1,4 +1,12 @@
-import { Processor, Reader, Writer } from '@rdfc/js-runner'
+import { FullProc, Processor, Reader, Writer } from '@rdfc/js-runner'
+
+export class TestProcessor extends Processor<unknown> {
+  async init(this: this): Promise<void> {
+    this.logger.info(JSON.stringify(this.args, undefined, 2))
+  }
+  async transform(this: this): Promise<void> {}
+  async produce(this: this): Promise<void> {}
+}
 
 type EchoArgs = {
   reader: Reader
@@ -30,17 +38,16 @@ type LogArgs = {
 }
 
 export class LogProcessor extends Processor<LogArgs> {
+  async produce(this: LogArgs & LogProcessor): Promise<void> {}
   async init(): Promise<void> {
     this.logger.info('Init log processor')
   }
 
-  async transform(this: LogArgs & this): Promise<void> {
+  async transform(this: FullProc<this>): Promise<void> {
     for await (const msg of this.args.reader.strings()) {
       this.logger.info('Got msg' + msg)
     }
   }
-
-  async produce() {}
 }
 
 type SendArgs = {

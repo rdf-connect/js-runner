@@ -1,7 +1,23 @@
+import { Any } from './reader'
+
 const decoder = new TextDecoder()
 export interface Convertor<T> {
   from(buffer: Uint8Array): T
   fromStream(stream: AsyncIterable<Uint8Array>): Promise<T>
+}
+
+export const AnyConvertor: Convertor<Any> = {
+  from: function (buffer: Uint8Array): Any {
+    return {
+      buffer,
+    }
+  },
+  fromStream: async function (inp: AsyncIterable<Uint8Array>): Promise<Any> {
+    const stream = (async function* () {
+      yield* inp
+    })()
+    return { stream }
+  },
 }
 
 export const StringConvertor: Convertor<string> = {

@@ -1,14 +1,32 @@
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
-@prefix rdfc: <https://w3id.org/rdf-connect/ontology#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
 
 <> owl:imports <./processors.ttl>.
 <> a rdfc:Pipeline;
-  rdfc:dependency <>;
-  rdfc:processor <sender>, <echo>, <log>;
-  rdfc:runner rdfc:JsRunner.
+  rdfc:consistsOf [
+    rdfc:instantiates rdfc:NodeRunner;
+    rdfc:processor <sender>, <echo>, <log>;
+  ].
 
+# <> a rdfc:Pipeline;
+#   rdfc:dependency <>;
+#   rdfc:processor <sender>, <echo>, <log>;
+#   rdfc:runner rdfc:JsRunner;
+#   rdfc:consistsOf [
+#     rdfc:instantiates rdfc:BunRunner;
+#     rdfc:processor <log>;
+#   ], [
+#     rdfc:instantiates rdfc:AnyRunner;
+#     rdfc:processor <echo>, <test>;
+#     rdfc:via [
+#       a rdfc:HttpEndpoint;
+#       rdfc:url "http://myRemote:5000/";
+#     ];
+#   ].
 <1> a rdfc:Writer, rdfc:Reader.
+
 <2> a rdfc:Writer, rdfc:Reader.
+#
 <sender> a rdfc:SendProcessor;
   rdfc:writer <1>;
   rdfc:msg "hallo", "world".
@@ -19,4 +37,12 @@
 
 <log> a rdfc:LogProcessor;
   rdfc:reader <2>.
+
+<test> a rdfc:Test;
+  rdfc:path ( <a> <b> );
+  rdfc:path "help";
+  rdfc:cbd [
+    a rdfc:Something;
+    rdfc:else [ a rdfc:SomethingElse ];
+  ].
 
