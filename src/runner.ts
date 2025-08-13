@@ -117,8 +117,12 @@ export class Runner {
   }
 
   async start() {
-    await Promise.all(this.processors.map((x) => x.produce()))
-    await Promise.all(this.processorTransforms)
+    try {
+      await Promise.all(this.processors.map((x) => x.produce()))
+      await Promise.all(this.processorTransforms)
+    } catch (ex: unknown) {
+      this.logger.error('Start failed: ' + JSON.stringify(ex))
+    }
   }
 
   createWriter(uri: Term): Writer {
@@ -170,23 +174,24 @@ export class Runner {
     }
 
     if (msg.pipeline) {
-      // here
-      const quads = new Parser().parse(msg.pipeline)
-      this.shapes = extractShapes(
-        quads,
-        {
-          [RDFC.Reader]: (x: Cont) => this.createReader(x.id),
-          [RDFC.Writer]: (x: Cont) => this.createWriter(x.id),
-        },
-        {
-          [RDFC.Reader]: empty<Cont>(),
-          [RDFC.Writer]: empty<Cont>(),
-        },
-      )
-      this.quads = quads
-      this.logger.info(
-        'extracted shapes ' + JSON.stringify(Object.keys(this.shapes.lenses)),
-      )
+      try {
+        // here
+        const quads = new Parser().parse(msg.pipeline)
+        this.shapes = extractShapes(
+          quads,
+          {
+            [RDFC.Reader]: (x: Cont) => this.createReader(x.id),
+            [RDFC.Writer]: (x: Cont) => this.createWriter(x.id),
+          },
+          {
+            [RDFC.Reader]: empty<Cont>(),
+            [RDFC.Writer]: empty<Cont>(),
+          },
+        )
+        this.quads = quads
+      } catch (ex: unknown) {
+        this.logger.error('Pipeline failed: ' + JSON.stringify(ex))
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@rdfc/js-runner",
-  "version": "2.0.0-alpha.7",
+  "version": "2.0.0-alpha.8",
   "main": "lib/index.js",
   "type": "module",
   "scripts": {

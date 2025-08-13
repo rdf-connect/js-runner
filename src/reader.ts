@@ -31,7 +31,7 @@ export interface Reader {
 class MyIter<T> implements AsyncIterable<T> {
   private convertor: Convertor<T>
   private queue: (T | undefined)[] = []
-  private resolveNext: ((value: T | undefined) => void) | null = null
+  private resolveNext: ((value: undefined) => void) | null = null
 
   constructor(convertor: Convertor<T>) {
     this.convertor = convertor
@@ -39,20 +39,18 @@ class MyIter<T> implements AsyncIterable<T> {
 
   push(buffer: Uint8Array) {
     const item = this.convertor.from(buffer)
+    this.queue.push(item)
     if (this.resolveNext) {
-      this.resolveNext(item)
+      this.resolveNext(undefined)
       this.resolveNext = null
-    } else {
-      this.queue.push(item)
     }
   }
 
   close() {
+    this.queue.push(undefined)
     if (this.resolveNext) {
       this.resolveNext(undefined)
       this.resolveNext = null
-    } else {
-      this.queue.push(undefined)
     }
   }
 
@@ -64,11 +62,10 @@ class MyIter<T> implements AsyncIterable<T> {
       }
     })(chunks)
     const item = await this.convertor.fromStream(stream)
+    this.queue.push(item)
     if (this.resolveNext) {
-      this.resolveNext(item)
+      this.resolveNext(undefined)
       this.resolveNext = null
-    } else {
-      this.queue.push(item)
     }
   }
 
@@ -79,11 +76,7 @@ class MyIter<T> implements AsyncIterable<T> {
         if (item === undefined) break
         yield item
       } else {
-        const item = await new Promise<T | undefined>(
-          (resolve) => (this.resolveNext = resolve),
-        )
-        if (item === undefined) break
-        yield item
+        await new Promise<undefined>((resolve) => (this.resolveNext = resolve))
       }
     }
   }
@@ -128,6 +121,7 @@ export class ReaderInstance implements Reader {
 
   handleMsg(msg: Message) {
     this.logger.debug(`${this.uri} handling message`)
+    console.log(`${this.uri} handling message`)
     for (const iter of this.iterators) {
       iter.push(msg.data)
     }
