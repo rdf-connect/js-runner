@@ -1,12 +1,14 @@
-import winston from 'winston'
+import winston, { Logger } from 'winston'
 import Transport from 'winston-transport'
 
 import * as grpc from '@grpc/grpc-js'
 import { LogMessage } from '@rdfc/proto'
+
 export class RpcTransport extends Transport {
   private readonly stream: grpc.ClientWritableStream<LogMessage>
   private readonly entities: string[]
   private readonly aliases: string[]
+
   constructor(opts: {
     stream: grpc.ClientWritableStream<LogMessage>
     entities: string[]
@@ -35,4 +37,28 @@ export class RpcTransport extends Transport {
       callback()
     }
   }
+
+  withEntity(entity: string): RpcTransport {
+    return new RpcTransport({
+      stream: this.stream,
+      entities: [...this.entities, entity],
+      aliases: this.aliases,
+    })
+  }
+}
+
+export function extendLogger(baseLogger: Logger, newEntity: string): Logger {
+  const newTransports = baseLogger.transports.map((t) => {
+    if (t instanceof RpcTransport) {
+      return t.withEntity(newEntity)
+    }
+    return t
+  })
+
+  return winston.createLogger({
+    level: baseLogger.level,
+    format: baseLogger.format,
+    defaultMeta: baseLogger.defaultMeta,
+    transports: newTransports,
+  })
 }
