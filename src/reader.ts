@@ -121,7 +121,6 @@ export class ReaderInstance implements Reader {
 
   handleMsg(msg: Message) {
     this.logger.debug(`${this.uri} handling message`)
-    console.log(`${this.uri} handling message`)
     for (const iter of this.iterators) {
       iter.push(msg.data)
     }

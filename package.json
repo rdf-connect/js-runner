@@ -1,6 +1,6 @@
 {
   "name": "@rdfc/js-runner",
-  "version": "2.0.0-alpha.9",
+  "version": "2.0.0-alpha.10",
   "main": "lib/index.js",
   "type": "module",
   "scripts": {
@@ -37,7 +37,7 @@
     "@types/node": "^22.13.5",
     "@typescript-eslint/eslint-plugin": "^8.25.0",
     "@typescript-eslint/parser": "^8.25.0",
-    "@vitest/coverage-v8": "^3.0.7",
+    "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.3",
@@ -50,7 +50,7 @@
     "tsc-alias": "^1.8.10",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.25.0",
-    "vitest": "^3.0.7"
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.6",
