@@ -12,7 +12,7 @@ export async function start(addr: string, uri: string) {
     transports: [
       new RpcTransport({
         entities: [uri, 'cli'],
-        stream: client.logStream(() => {}),
+        stream: client.logStream(() => { }),
       }),
     ],
   })
@@ -27,26 +27,26 @@ export async function start(addr: string, uri: string) {
 
   let processorsEnd!: (v: unknown) => unknown
   const processorsEnded = new Promise((res) => (processorsEnd = res))
-  ;(async () => {
-    for await (const chunk of stream) {
-      const msg: RunnerMessage = chunk
-      if (msg.proc) {
-        await runner.addProcessor(msg.proc)
-      }
-      if (msg.start) {
-        runner.start().then(processorsEnd)
+    ; (async () => {
+      for await (const chunk of stream) {
+        const msg: RunnerMessage = chunk
+        if (msg.proc) {
+          await runner.addProcessor(msg.proc)
+        }
+        if (msg.start) {
+          runner.start().then(processorsEnd)
+        }
+
+        await runner.handleOrchMessage(msg)
       }
 
-      await runner.handleOrchMessage(msg)
-    }
-
-    logger.error('Stream ended')
-  })()
+      logger.error('Stream ended')
+    })()
 
   await processorsEnded
 
   logger.info('All processors are finished')
   stream.end()
   client.close()
-  process.exit(0)
+  setTimeout(() => process.exit(0), 500)
 }
