@@ -25,6 +25,9 @@ export class WriterInstance implements Writer {
   private readonly write: Writable
   private readonly logger: Logger
 
+  private openStreams: number = 0;
+  private shouldClose: Array<() => void> = [];
+
   constructor(
     uri: string,
     client: RunnerClient,
@@ -57,19 +60,27 @@ export class WriterInstance implements Writer {
     buffer: AsyncIterable<T>,
     transform?: (x: T) => Uint8Array,
   ) {
+    this.openStreams += 1;
     const t = transform || ((x: unknown) => <Uint8Array>x)
     const stream = this.client.sendStreamMessage()
-    const id: Id = await new Promise((res) => stream.once('data', res))
-    this.logger.debug(`${this.uri} streams message with id ${id.id}`)
-    await this.write({ streamMsg: { id, channel: this.uri } })
 
     const write = promisify(stream.write.bind(stream))
+    await write({ id: this.uri });
+
+    const id: Id = await new Promise((res) => stream.once('data', res))
+
+    this.logger.debug(`${this.uri} streams message with id ${id.id}`)
+
     for await (const msg of buffer) {
-      await write({ data: t(msg) })
+      await write({ data: { data: t(msg) } })
     }
 
     this.logger.debug(`${this.uri} is done streaming message with id ${id.id}`)
     stream.end()
+
+    this.openStreams -= 1;
+
+    if (this.shouldClose.length > 0) await this.close()
   }
 
   async string(msg: string): Promise<void> {
@@ -80,11 +91,23 @@ export class WriterInstance implements Writer {
   }
 
   async close(issued = false): Promise<void> {
-    this.logger.debug(`${this.uri} closes stream`)
-    if (!issued) {
-      await this.write({
-        close: { channel: this.uri },
-      })
+    if (this.openStreams != 0) {
+      let res: () => void;
+      const out = new Promise(cb => res = () => cb(null));
+      this.shouldClose.push(res!);
+      await out;
+    } else {
+      this.logger.debug(`${this.uri} closes stream`)
+      if (!issued) {
+        await this.write({
+          close: { channel: this.uri },
+        })
+      }
+      if (this.shouldClose.length > 0) {
+        for (const cb of this.shouldClose) {
+          cb()
+        }
+      }
     }
   }
 }
