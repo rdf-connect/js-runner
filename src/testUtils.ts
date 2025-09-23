@@ -71,13 +71,21 @@ export function createWriter(iri = uri): [WriterInstance, ReaderInstance] {
         reader.close()
       }
     },
+    '',
     logger,
   )
   return [writeStream, reader]
 }
 
 export function createReader(iri = uri): ReaderInstance {
-  const reader = new ReaderInstance(iri, client, logger)
+  const reader = new ReaderInstance(
+    iri,
+    client,
+    async () => {
+      // TODO: handle msg
+    },
+    logger,
+  )
   return reader
 }
 

@@ -21,23 +21,30 @@ export interface Writer {
 const encoder = new TextEncoder()
 export class WriterInstance implements Writer {
   readonly uri: string
+  tick: number = 0
   private readonly client: RunnerClient
   private readonly write: Writable
   private readonly logger: Logger
 
-  private openStreams: number = 0;
-  private shouldClose: Array<() => void> = [];
+  private awaitingProcessed: Array<() => void> = []
+
+  private openStreams: number = 0
+  private shouldClose: Array<() => void> = []
+
+  private readonly runnerId: string
 
   constructor(
     uri: string,
     client: RunnerClient,
     write: Writable,
+    runnerId: string,
     logger: Logger,
   ) {
     this.client = client
     this.write = write
     this.uri = uri
     this.logger = logger
+    this.runnerId = runnerId
   }
   async any(any: Any): Promise<void> {
     if ('stream' in any) {
@@ -53,49 +60,63 @@ export class WriterInstance implements Writer {
 
   async buffer(buffer: Uint8Array): Promise<void> {
     this.logger.debug(`${this.uri} sends buffer ${buffer.length} bytes`)
-    await this.write({ msg: { data: buffer, channel: this.uri } })
+    const t = this.tick
+    this.tick += 1
+    await this.write({ msg: { data: buffer, channel: this.uri, tick: t } })
+
+    await new Promise((res) => this.awaitingProcessed.push(() => res(null)))
   }
 
   async stream<T = Uint8Array>(
     buffer: AsyncIterable<T>,
     transform?: (x: T) => Uint8Array,
   ) {
-    this.openStreams += 1;
+    this.openStreams += 1
     const t = transform || ((x: unknown) => <Uint8Array>x)
     const stream = this.client.sendStreamMessage()
 
     const write = promisify(stream.write.bind(stream))
-    await write({ id: this.uri });
+    const tick = this.tick
+    this.tick += 1
+    await write({ id: { channel: this.uri, tick, runner: this.runnerId } })
 
     const id: Id = await new Promise((res) => stream.once('data', res))
+
+    console.log('Received my message to start')
 
     this.logger.debug(`${this.uri} streams message with id ${id.id}`)
 
     for await (const msg of buffer) {
+      console.log('Strating to send chunk! ', t(msg), msg)
       await write({ data: { data: t(msg) } })
     }
 
-    this.logger.debug(`${this.uri} is done streaming message with id ${id.id}`)
+    console.log(`${this.uri} is done streaming message with id ${id.id}`)
     stream.end()
 
-    this.openStreams -= 1;
+    await new Promise((res) => this.awaitingProcessed.push(() => res(null)))
+
+    this.openStreams -= 1
 
     if (this.shouldClose.length > 0) await this.close()
   }
 
   async string(msg: string): Promise<void> {
     this.logger.debug(`${this.uri} sends string ${msg.length} characters`)
+    const t = this.tick
+    this.tick += 1
     await this.write({
-      msg: { data: encoder.encode(msg), channel: this.uri },
+      msg: { data: encoder.encode(msg), channel: this.uri, tick: t },
     })
+    await new Promise((res) => this.awaitingProcessed.push(() => res(null)))
   }
 
   async close(issued = false): Promise<void> {
     if (this.openStreams != 0) {
-      let res: () => void;
-      const out = new Promise(cb => res = () => cb(null));
-      this.shouldClose.push(res!);
-      await out;
+      let res: () => void
+      const out = new Promise((cb) => (res = () => cb(null)))
+      this.shouldClose.push(res!)
+      await out
     } else {
       this.logger.debug(`${this.uri} closes stream`)
       if (!issued) {
@@ -108,6 +129,17 @@ export class WriterInstance implements Writer {
           cb()
         }
       }
+    }
+  }
+
+  handled(): void {
+    if (this.awaitingProcessed.length > 0) {
+      this.awaitingProcessed.shift()!()
+    } else {
+      this.logger.error(
+        'Expected to be waiting for a message to be processed, but this is not the case ' +
+          this.uri,
+      )
     }
   }
 }
