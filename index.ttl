@@ -39,7 +39,7 @@ rdfc:NodeRunner a rdfc:Runner;
 # rdfc:NodeRunner a rdfc:JsRunner;
 #   rdfc:command "npx js-runner";
 #   rdfc:processor_definition <JsProcessorShape>.
-rdfc:BunRunner a rdfc:CommandRunner;
+rdfc:BunRunner a rdfc:Runner;
   rdfc:handlesSubjectsOf rdfc:jsImplementationOf;
   rdfc:command "bunx js-runner";
   rdfc:processor_definition <JsProcessorShape>.

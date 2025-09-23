@@ -47,8 +47,8 @@ type ProcessorConfig = {
 export type FullProc<C extends Proc<unknown>> =
   C extends Proc<infer T> ? T & C : unknown
 export class Runner {
-  private readonly readers: { [uri: string]: ReaderInstance[] } = {}
-  private readonly writers: { [uri: string]: WriterInstance[] } = {}
+  private readonly readers: { [uri: string]: ReaderInstance } = {}
+  private readonly writers: { [uri: string]: WriterInstance } = {}
   private readonly client: RunnerClient
   private readonly write: Writable
   private readonly logger: Logger
@@ -128,48 +128,56 @@ export class Runner {
   createWriter(uri: Term): Writer {
     const ids = uri.value
 
-    if (this.writers[ids] === undefined) {
-      this.writers[ids] = []
+    if (this.writers[ids] !== undefined) {
+      return this.writers[ids]
     }
-    const writer = new WriterInstance(ids, this.client, this.write, this.logger)
-    this.writers[ids].push(writer)
+    const writer = new WriterInstance(
+      ids,
+      this.client,
+      this.write,
+      this.uri,
+      this.logger,
+    )
+    this.writers[ids] = writer
     return writer
   }
 
   createReader(uri: Term): Reader {
     const ids = uri.value
 
-    if (this.readers[ids] === undefined) {
-      this.readers[ids] = []
+    if (this.readers[ids] !== undefined) {
+      return this.readers[ids]
     }
-    const reader = new ReaderInstance(ids, this.client, this.logger)
-    this.readers[ids].push(reader)
+    const reader = new ReaderInstance(ids, this.client, this.write, this.logger)
+    this.readers[ids] = reader
     return reader
   }
 
   async handleOrchMessage(msg: RunnerMessage) {
     if (msg.msg) {
       this.logger.debug('Handling data msg for ' + msg.msg.channel)
-      for (const reader of this.readers[msg.msg.channel] || []) {
-        reader.handleMsg(msg.msg)
+      const r = this.readers[msg.msg.channel]
+
+      if (r) {
+        r.handleMsg(msg.msg)
       }
     }
 
     if (msg.streamMsg) {
-      for (const reader of this.readers[msg.streamMsg.channel] || []) {
-        reader.handleStreamingMessage(msg.streamMsg)
-      }
+      const r = this.readers[msg.streamMsg.channel]
+      r.handleStreamingMessage(msg.streamMsg)
     }
 
     if (msg.close) {
       const uri = msg.close.channel
-
-      for (const reader of this.readers[uri] || []) {
-        reader.close()
+      const r = this.readers[uri]
+      if (r) {
+        r.close()
       }
 
-      for (const writer of this.writers[uri] || []) {
-        await writer.close(true)
+      const w = this.writers[uri]
+      if (w) {
+        w.close(true)
       }
     }
 
@@ -192,6 +200,10 @@ export class Runner {
       } catch (ex: unknown) {
         this.logger.error('Pipeline failed: ' + JSON.stringify(ex))
       }
+    }
+
+    if (msg.processed) {
+      this.writers[msg.processed.uri].handled()
     }
   }
 }

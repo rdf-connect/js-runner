@@ -29,6 +29,10 @@ export const StringConvertor: Convertor<string> = {
     for await (const chunk of stream) {
       chunks.push(chunk)
     }
+    console.log(
+      'Chunks',
+      chunks.map((x) => x.length),
+    )
     return decoder.decode(Buffer.concat(chunks))
   },
 }
