@@ -62,9 +62,10 @@ export class WriterInstance implements Writer {
     this.logger.debug(`${this.uri} sends buffer ${buffer.length} bytes`)
     const t = this.tick
     this.tick += 1
+    const o = new Promise((res) => this.awaitingProcessed.push(() => res(null)))
     await this.write({ msg: { data: buffer, channel: this.uri, tick: t } })
 
-    await new Promise((res) => this.awaitingProcessed.push(() => res(null)))
+    await o
   }
 
   async stream<T = Uint8Array>(
@@ -82,16 +83,12 @@ export class WriterInstance implements Writer {
 
     const id: Id = await new Promise((res) => stream.once('data', res))
 
-    console.log('Received my message to start')
-
     this.logger.debug(`${this.uri} streams message with id ${id.id}`)
 
     for await (const msg of buffer) {
-      console.log('Strating to send chunk! ', t(msg), msg)
       await write({ data: { data: t(msg) } })
     }
 
-    console.log(`${this.uri} is done streaming message with id ${id.id}`)
     stream.end()
 
     await new Promise((res) => this.awaitingProcessed.push(() => res(null)))
@@ -105,10 +102,11 @@ export class WriterInstance implements Writer {
     this.logger.debug(`${this.uri} sends string ${msg.length} characters`)
     const t = this.tick
     this.tick += 1
+    const o = new Promise((res) => this.awaitingProcessed.push(() => res(null)));
     await this.write({
       msg: { data: encoder.encode(msg), channel: this.uri, tick: t },
     })
-    await new Promise((res) => this.awaitingProcessed.push(() => res(null)))
+    await o
   }
 
   async close(issued = false): Promise<void> {
@@ -138,7 +136,7 @@ export class WriterInstance implements Writer {
     } else {
       this.logger.error(
         'Expected to be waiting for a message to be processed, but this is not the case ' +
-          this.uri,
+        this.uri,
       )
     }
   }

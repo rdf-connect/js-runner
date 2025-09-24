@@ -7,13 +7,13 @@ export interface Convertor<T> {
 }
 
 export const AnyConvertor: Convertor<Any> = {
-  from: function (buffer: Uint8Array): Any {
+  from: function(buffer: Uint8Array): Any {
     return {
       buffer,
     }
   },
-  fromStream: async function (inp: AsyncIterable<Uint8Array>): Promise<Any> {
-    const stream = (async function* () {
+  fromStream: async function(inp: AsyncIterable<Uint8Array>): Promise<Any> {
+    const stream = (async function*() {
       yield* inp
     })()
     return { stream }
@@ -29,22 +29,18 @@ export const StringConvertor: Convertor<string> = {
     for await (const chunk of stream) {
       chunks.push(chunk)
     }
-    console.log(
-      'Chunks',
-      chunks.map((x) => x.length),
-    )
     return decoder.decode(Buffer.concat(chunks))
   },
 }
 export const StreamConvertor: Convertor<AsyncGenerator<Uint8Array>> = {
   from(buffer) {
-    return (async function* () {
+    return (async function*() {
       yield buffer
     })()
   },
 
   async fromStream(stream) {
-    return (async function* () {
+    return (async function*() {
       yield* stream
     })()
   },
