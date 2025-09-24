@@ -12,14 +12,14 @@ import { Writable } from './runner'
 
 export type Any =
   | {
-      string: string
-    }
+    string: string
+  }
   | {
-      stream: AsyncGenerator<Uint8Array>
-    }
+    stream: AsyncGenerator<Uint8Array>
+  }
   | {
-      buffer: Uint8Array
-    }
+    buffer: Uint8Array
+  }
 
 export interface Reader {
   readonly uri: string
@@ -65,10 +65,9 @@ class MyIter<T> implements AsyncIterable<T> {
     onComplete: () => void,
   ) {
     // This is an asyhc generator that
-    const stream = (async function* (stream) {
+    const stream = (async function*(stream) {
       for await (const c of stream) {
         const chunk: DataChunk = c
-        console.log('Got chunk ', chunk)
         yield chunk.data
       }
     })(chunks)
@@ -158,7 +157,7 @@ export class ReaderInstance implements Reader {
 
   close() {
     for (const iter of this.iterators) {
-      iter.close(() => {})
+      iter.close(() => { })
     }
   }
 
