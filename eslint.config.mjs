@@ -11,7 +11,7 @@ export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['src/generated/', '**/lib/', 'coverage/'],
+    ignores: ['src/generated/', '**/lib/', 'coverage/', '__tests__/'],
   },
   {
     languageOptions: {

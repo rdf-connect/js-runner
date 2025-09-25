@@ -12,7 +12,7 @@ export async function start(addr: string, uri: string) {
     transports: [
       new RpcTransport({
         entities: [uri, 'cli'],
-        stream: client.logStream(() => { }),
+        stream: client.logStream(() => {}),
       }),
     ],
   })
@@ -25,7 +25,8 @@ export async function start(addr: string, uri: string) {
 
   await writable({ identify: { uri } })
 
-  const processorsEnded = new Promise(async (res) => {
+  /* eslint-disable no-async-promise-executor */
+  await new Promise(async (res) => {
     for await (const chunk of stream) {
       const msg: RunnerMessage = chunk
       if (msg.proc) {
@@ -39,9 +40,7 @@ export async function start(addr: string, uri: string) {
     }
 
     logger.error('Stream ended')
-  });
-
-  await processorsEnded
+  })
 
   logger.info('All processors are finished')
   stream.end()

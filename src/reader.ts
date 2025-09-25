@@ -9,17 +9,18 @@ import {
   StringConvertor,
 } from './convertor'
 import { Writable } from './runner'
+import { promisify } from 'util'
 
 export type Any =
   | {
-    string: string
-  }
+      string: string
+    }
   | {
-    stream: AsyncGenerator<Uint8Array>
-  }
+      stream: AsyncGenerator<Uint8Array>
+    }
   | {
-    buffer: Uint8Array
-  }
+      buffer: Uint8Array
+    }
 
 export interface Reader {
   readonly uri: string
@@ -60,12 +61,9 @@ class MyIter<T> implements AsyncIterable<T> {
     }
   }
 
-  async pushStream(
-    chunks: ClientReadableStream<DataChunk>,
-    onComplete: () => void,
-  ) {
+  async pushStream(chunks: AsyncIterable<DataChunk>, onComplete: () => void) {
     // This is an asyhc generator that
-    const stream = (async function*(stream) {
+    const stream = (async function* (stream) {
       for await (const c of stream) {
         const chunk: DataChunk = c
         yield chunk.data
@@ -157,24 +155,141 @@ export class ReaderInstance implements Reader {
 
   close() {
     for (const iter of this.iterators) {
-      iter.close(() => { })
+      iter.close(() => {})
     }
   }
 
-  handleStreamingMessage(msg: StreamMessage) {
+  async handleStreamingMessage(msg: StreamMessage) {
     this.logger.debug(`${this.uri} handling streaming message`)
+    const id = { id: msg.id }
+    const chunks = this.client.receiveStreamMessage()
 
-    const chunks = this.client.receiveStreamMessage({ id: msg.id })
+    const write = promisify(chunks.write.bind(chunks))
+
     const promises = []
+    let idx = 0
 
+    const iters = fanoutStream(chunks, this.iterators.length, async () => {
+      await write({ processed: idx++ })
+    })
     for (const iter of this.iterators) {
       promises.push(
-        new Promise((res) => iter.pushStream(chunks, () => res(null))),
+        new Promise((res) => iter.pushStream(iters.pop()!, () => res(null))),
       )
     }
+
+    await write({ id })
 
     Promise.all(promises).then(() =>
       this.write({ processed: { tick: msg.tick, uri: this.uri } }),
     )
   }
+}
+
+function fanoutStream<T>(
+  stream: ClientReadableStream<T>,
+  numConsumers: number,
+  onAllHandled: () => void | Promise<void>,
+): AsyncIterable<T>[] {
+  type Waiter = (value: IteratorResult<T>) => void
+
+  let ended = false
+  const buffer: T[] = []
+  const pending: Waiter[] = []
+  let activeConsumers = numConsumers
+
+  // consumer bookkeeping
+  let awaitingAck = 0
+
+  function pushChunk(chunk: T) {
+    buffer.push(chunk)
+    flush()
+  }
+
+  function flush() {
+    while (buffer.length > 0 && pending.length > 0) {
+      const chunk = buffer[0] // keep until all consumers ack
+      const waiter = pending.shift()!
+      waiter({ value: chunk, done: false })
+      awaitingAck++
+    }
+  }
+
+  function end() {
+    ended = true
+    while (pending.length > 0) {
+      const waiter = pending.shift()!
+      waiter({ value: undefined, done: true })
+    }
+  }
+
+  stream.on('data', (chunk: T) => {
+    pushChunk(chunk)
+  })
+
+  stream.on('end', () => {
+    end()
+  })
+
+  stream.on('error', (err) => {
+    while (pending.length > 0) {
+      const waiter = pending.shift()!
+      waiter({ value: undefined, done: true })
+    }
+    throw err
+  })
+
+  function makeIterable(): AsyncIterable<T> {
+    return {
+      [Symbol.asyncIterator]() {
+        return {
+          next(): Promise<IteratorResult<T>> {
+            if (buffer.length > 0) {
+              const chunk = buffer[0]
+              awaitingAck++
+              return Promise.resolve({ value: chunk, done: false })
+            }
+            if (ended) {
+              return Promise.resolve({ value: undefined, done: true })
+            }
+            return new Promise((resolve) => {
+              pending.push(resolve)
+            })
+          },
+          async return() {
+            activeConsumers--
+            if (activeConsumers === 0) {
+              end()
+            }
+            return { value: undefined, done: true }
+          },
+        }
+      },
+    }
+  }
+
+  async function ack() {
+    awaitingAck--
+    if (awaitingAck === 0) {
+      // all consumers done with the current chunk
+      buffer.shift() // drop it
+      await onAllHandled()
+      flush() // continue with next chunk
+    }
+  }
+
+  // wrap consumer so they *must* call ack() after processing
+  function wrap(iterable: AsyncIterable<T>): AsyncIterable<T> {
+    return {
+      async *[Symbol.asyncIterator]() {
+        for await (const item of iterable) {
+          yield item
+          await ack()
+        }
+      },
+    }
+  }
+
+  const rawIterables = Array.from({ length: numConsumers }, makeIterable)
+  return rawIterables.map(wrap)
 }

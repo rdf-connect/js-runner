@@ -86,7 +86,10 @@ export class WriterInstance implements Writer {
     this.logger.debug(`${this.uri} streams message with id ${id.id}`)
 
     for await (const msg of buffer) {
+      const processedPromise = new Promise((res) => stream.once('data', res))
       await write({ data: { data: t(msg) } })
+      // Await a message on the stream, indicating that the chunk has been processed
+      await processedPromise
     }
 
     stream.end()
@@ -102,7 +105,7 @@ export class WriterInstance implements Writer {
     this.logger.debug(`${this.uri} sends string ${msg.length} characters`)
     const t = this.tick
     this.tick += 1
-    const o = new Promise((res) => this.awaitingProcessed.push(() => res(null)));
+    const o = new Promise((res) => this.awaitingProcessed.push(() => res(null)))
     await this.write({
       msg: { data: encoder.encode(msg), channel: this.uri, tick: t },
     })
@@ -136,7 +139,7 @@ export class WriterInstance implements Writer {
     } else {
       this.logger.error(
         'Expected to be waiting for a message to be processed, but this is not the case ' +
-        this.uri,
+          this.uri,
       )
     }
   }

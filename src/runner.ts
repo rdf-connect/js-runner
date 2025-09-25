@@ -79,7 +79,7 @@ export class Runner {
       transports: [
         new RpcTransport({
           entities: [proc.uri, this.uri],
-          stream: this.client.logStream(() => { }),
+          stream: this.client.logStream(() => {}),
         }),
       ],
     })
@@ -165,7 +165,7 @@ export class Runner {
 
     if (msg.streamMsg) {
       const r = this.readers[msg.streamMsg.channel]
-      r.handleStreamingMessage(msg.streamMsg)
+      await r.handleStreamingMessage(msg.streamMsg)
     }
 
     if (msg.close) {
