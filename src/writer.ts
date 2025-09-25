@@ -1,4 +1,4 @@
-import { Id, OrchestratorMessage, RunnerClient } from '@rdfc/proto'
+import { OrchestratorMessage, RunnerClient } from '@rdfc/proto'
 import { promisify } from 'util'
 import { Logger } from 'winston'
 import { Any } from './reader'
@@ -85,9 +85,9 @@ export class WriterInstance implements Writer {
     const tick = this.tick++
     await write({ id: { channel: this.uri, tick, runner: this.runnerId } })
 
-    const id: Id = await new Promise((res) => stream.once('data', res))
+    const id: number = await new Promise((res) => stream.once('data', res))
 
-    this.logger.debug(`${this.uri} streams message with id ${id.id}`)
+    this.logger.debug(`${this.uri} streams message with id ${id}`)
 
     for await (const msg of buffer) {
       const processedPromise = new Promise((res) => stream.once('data', res))
@@ -148,7 +148,7 @@ export class WriterInstance implements Writer {
     } else {
       this.logger.error(
         'Expected to be waiting for a message to be processed, but this is not the case ' +
-          this.uri,
+        this.uri,
       )
     }
   }

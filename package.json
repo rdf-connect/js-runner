@@ -53,7 +53,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@rdfc/proto": "^0.1.2-alpha.3",
+    "@rdfc/proto": "^0.1.2-alpha.4",
     "@treecg/types": "^0.4.6",
     "jsonld": "^8.3.3",
     "jsonld-streaming-parser": "^5.0.0",

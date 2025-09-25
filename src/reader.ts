@@ -13,14 +13,14 @@ import { promisify } from 'util'
 
 export type Any =
   | {
-      string: string
-    }
+    string: string
+  }
   | {
-      stream: AsyncGenerator<Uint8Array>
-    }
+    stream: AsyncGenerator<Uint8Array>
+  }
   | {
-      buffer: Uint8Array
-    }
+    buffer: Uint8Array
+  }
 
 export interface Reader {
   readonly uri: string
@@ -63,7 +63,7 @@ class MyIter<T> implements AsyncIterable<T> {
 
   async pushStream(chunks: AsyncIterable<DataChunk>, onComplete: () => void) {
     // This is an asyhc generator that
-    const stream = (async function* (stream) {
+    const stream = (async function*(stream) {
       for await (const c of stream) {
         const chunk: DataChunk = c
         yield chunk.data
@@ -149,13 +149,13 @@ export class ReaderInstance implements Reader {
     }
 
     Promise.all(promises).then(() =>
-      this.write({ processed: { tick: msg.tick, uri: this.uri } }),
+      this.write({ processed: { tick: msg.tick, channel: this.uri } }),
     )
   }
 
   close() {
     for (const iter of this.consumers) {
-      iter.close(() => {})
+      iter.close(() => { })
     }
   }
 
@@ -185,10 +185,10 @@ export class ReaderInstance implements Reader {
       )
     }
 
-    await write({ id: { id } })
+    await write({ id })
 
     Promise.all(consumersConsumed).then(() =>
-      this.write({ processed: { tick: tick, uri: this.uri } }),
+      this.write({ processed: { tick: tick, channel: this.uri } }),
     )
   }
 }
