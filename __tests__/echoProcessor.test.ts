@@ -76,6 +76,7 @@ describe('EchoProcessor', () => {
         }
       })()
 
+
     await inputWriter.string('Hello')
     expect(msgs).toEqual(['Hello'])
     await inputWriter.string('world')
