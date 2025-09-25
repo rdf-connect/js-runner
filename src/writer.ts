@@ -85,9 +85,9 @@ export class WriterInstance implements Writer {
     const tick = this.tick++
     await write({ id: { channel: this.uri, tick, runner: this.runnerId } })
 
-    const id: number = await new Promise((res) => stream.once('data', res))
+    const id = await new Promise((res) => stream.once('data', res))
 
-    this.logger.debug(`${this.uri} streams message with id ${id}`)
+    this.logger.debug(`${this.uri} streams message with id ${JSON.stringify(id)}`)
 
     for await (const msg of buffer) {
       const processedPromise = new Promise((res) => stream.once('data', res))
