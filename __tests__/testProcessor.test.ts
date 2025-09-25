@@ -1,9 +1,7 @@
-
 import { describe, expect, test, vi } from 'vitest'
 import { ProcHelper } from '../src/testUtils'
 import { Processor } from '../src/processor'
 import path from 'path/posix'
-
 
 // Example test processor
 export class TestProcessor extends Processor<{ message: string }> {
@@ -13,7 +11,7 @@ export class TestProcessor extends Processor<{ message: string }> {
 
   async transform(): Promise<void> {
     // Mock transform - just wait
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
   }
 
   async produce(): Promise<void> {
@@ -21,11 +19,11 @@ export class TestProcessor extends Processor<{ message: string }> {
   }
 }
 
-describe("Test processor", async () => {
-  test("Is well defined", async () => {
-    const helper = new ProcHelper<TestProcessor>();
+describe('Test processor', async () => {
+  test('Is well defined', async () => {
+    const helper = new ProcHelper<TestProcessor>()
 
-    await helper.importFile(path.resolve('./index.ttl'));
+    await helper.importFile(path.resolve('./index.ttl'))
     await helper.importInline(
       path.resolve('config.ttl'),
       `@prefix ex: <http://example.org/>.
@@ -48,22 +46,24 @@ rdfc:Test a owl:Class;
     sh:name "message";
     sh:maxCount 1;
     sh:minCount 1;
-  ].`);
+  ].`,
+    )
 
     const config = helper.getConfig('Test')
-    expect(config.clazz).toEqual("TestProcessor");
-    expect(config.location).toBeDefined();
-    expect(config.file).toBeDefined();
+    expect(config.clazz).toEqual('TestProcessor')
+    expect(config.location).toBeDefined()
+    expect(config.file).toBeDefined()
 
     await helper.importInline(
       path.resolve('pipeline.ttl'),
       `@prefix rdfc: <https://w3id.org/rdf-connect#>.
 
 <http://example.org/proc> a rdfc:Test;
-  rdfc:message "Hello world".`);
+  rdfc:message "Hello world".`,
+    )
 
-    const proc = await helper.getProcessor('http://example.org/proc');
+    const proc = await helper.getProcessor('http://example.org/proc')
 
-    expect(proc.message).toEqual("Hello world");
-  });
-});
+    expect(proc.message).toEqual('Hello world')
+  })
+})
