@@ -1,6 +1,5 @@
 import {
   DataChunk,
-  Id,
   LogMessage,
   RunnerMessage,
   Processor as ProcConfig,
@@ -32,9 +31,9 @@ export function channel(runner: Runner, name: string): [Writer, Reader] {
 export class StreamMsgMock {
   data: DataChunk[] = []
 
-  private readonly resolveId: (id: StreamIdentify) => Id
+  private readonly resolveId: (id: StreamIdentify) => number
 
-  constructor(resolveId: (id: StreamIdentify) => Id) {
+  constructor(resolveId: (id: StreamIdentify) => number) {
     this.resolveId = resolveId
   }
 
@@ -145,10 +144,10 @@ export class OrchestratorMock {
 
     receivingStream.registerOnce(
       (x) => x.id,
-      ({ id }) => {
+      (id) => {
         streamId = id
         this.streamMsgs[id].receivingStream = receivingStream
-        this.streamMsgs[id].toProducingStream({ id: { id } })
+        this.streamMsgs[id].toProducingStream({ id })
       },
     )
 
