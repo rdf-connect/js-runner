@@ -82,7 +82,7 @@ export class Runner {
       transports: [
         new RpcTransport({
           entities: [proc.uri, this.uri],
-          stream: this.client.logStream(() => { }),
+          stream: this.client.logStream(() => {}),
         }),
       ],
     })

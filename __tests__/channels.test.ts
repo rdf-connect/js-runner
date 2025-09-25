@@ -124,7 +124,7 @@ describe('Writer', async () => {
     const write = async (msg: FromRunner) => msgs.push(msg)
     const writer = new WriterInstance(uri, client as any, write, runner, logger)
 
-    let closingPromise: Promise<void> | undefined = undefined;
+    let closingPromise: Promise<void> | undefined = undefined
     async function* gen() {
       yield encoder.encode('hello')
 
@@ -141,7 +141,7 @@ describe('Writer', async () => {
     }
 
     await writer.stream(gen())
-    await closingPromise!;
+    await closingPromise!
     expect(msgs.map((x) => x.close!.channel)).toEqual([uri])
 
     expect(client.data.length).toBe(2)

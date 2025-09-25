@@ -12,7 +12,7 @@ export async function start(addr: string, uri: string) {
     transports: [
       new RpcTransport({
         entities: [uri, 'cli'],
-        stream: client.logStream(() => { }),
+        stream: client.logStream(() => {}),
       }),
     ],
   })
