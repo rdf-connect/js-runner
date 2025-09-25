@@ -8,24 +8,6 @@
 @prefix sh: <http://www.w3.org/ns/shacl#>.
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
 
-# rdfc:LogProcessor a rdfc:JsProcessor;
-#   rdfs:label "Simple Log Processor";
-#   rdfs:comment "Logs incoming messages";
-#   rdfc:entrypoint <./>;
-#   rdfc:file <./lib/util_processors.js>;
-#   rdfc:class "LogProcessor".
-# [ ] a sh:NodeShape; sh:targetClass rdfc:LogProcessor;
-#   sh:property [
-#     sh:path rdfc:reader;
-#     sh:name "reader";
-#     sh:minCount 1;
-#     sh:maxCount 1;
-#     sh:class rdfc:Reader;
-#   ].
-# rdfc:JsRunner a rdfc:CommandRunner;
-#   rdfc:command "npx js-runner";
-#   rdfc:processor_definition <JsProcessorShape>.
-#
 rdfc:JsRunner a rdfc:CommandRunner;
   rdfc:handles rdfc:JsProcessor;
   rdfc:command "node node_modules/@rdfc/js-runner/bin/runner.js";
@@ -36,9 +18,6 @@ rdfc:NodeRunner a rdfc:Runner;
   rdfc:command "npx js-runner";
   rdfc:processor_definition <JsProcessorShape>.
 
-# rdfc:NodeRunner a rdfc:JsRunner;
-#   rdfc:command "npx js-runner";
-#   rdfc:processor_definition <JsProcessorShape>.
 rdfc:BunRunner a rdfc:Runner;
   rdfc:handlesSubjectsOf rdfc:jsImplementationOf;
   rdfc:command "bunx js-runner";

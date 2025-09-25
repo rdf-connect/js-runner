@@ -1,4 +1,6 @@
 import {
+  Close,
+  Message,
   OrchestratorMessage,
   Processor,
   RunnerClient,
@@ -84,14 +86,13 @@ export class Runner {
       ],
     })
 
-    const ty = JSON.stringify(
-      this.quads
-        .filter(
-          (x) =>
-            x.subject.value === proc.uri && x.predicate.equals(RDF.terms.type),
-        )
-        .map((x) => x.object.value),
-    )
+    const ty = this.quads
+      .filter(
+        (x) =>
+          x.subject.value === proc.uri && x.predicate.equals(RDF.terms.type),
+      )
+      .map((x) => x.object.value)
+
     this.logger.info('parsing ' + proc.uri + ' type ' + ty)
     const args = this.shapes.lenses[RDFL.TypedExtract].execute({
       id: new NamedNode(proc.uri),
@@ -99,8 +100,6 @@ export class Runner {
     })
 
     const config: ProcessorConfig = JSON.parse(proc.config)
-    // const url = new URL(config.location)
-    // process.chdir(url.pathname)
     const jsProgram = await import(config.file)
     const clazz = jsProgram[config.clazz || 'default']
     const instance: Proc<unknown> = new clazz(args, procLogger)
@@ -126,19 +125,19 @@ export class Runner {
   }
 
   createWriter(uri: Term): Writer {
-    const ids = uri.value
+    const id = uri.value
 
-    if (this.writers[ids] !== undefined) {
-      return this.writers[ids]
+    if (this.writers[id] !== undefined) {
+      return this.writers[id]
     }
     const writer = new WriterInstance(
-      ids,
+      id,
       this.client,
       this.write,
       this.uri,
       this.logger,
     )
-    this.writers[ids] = writer
+    this.writers[id] = writer
     return writer
   }
 
@@ -155,12 +154,7 @@ export class Runner {
 
   async handleOrchMessage(msg: RunnerMessage) {
     if (msg.msg) {
-      this.logger.debug('Handling data msg for ' + msg.msg.channel)
-      const r = this.readers[msg.msg.channel]
-
-      if (r) {
-        r.handleMsg(msg.msg)
-      }
+      this.handleMsg(msg.msg)
     }
 
     if (msg.streamMsg) {
@@ -169,41 +163,57 @@ export class Runner {
     }
 
     if (msg.close) {
-      const uri = msg.close.channel
-      const r = this.readers[uri]
-      if (r) {
-        r.close()
-      }
-
-      const w = this.writers[uri]
-      if (w) {
-        w.close(true)
-      }
+      this.handleClose(msg.close)
     }
 
     if (msg.pipeline) {
-      try {
-        // here
-        const quads = new Parser().parse(msg.pipeline)
-        this.shapes = extractShapes(
-          quads,
-          {
-            [RDFC.Reader]: (x: Cont) => this.createReader(x.id),
-            [RDFC.Writer]: (x: Cont) => this.createWriter(x.id),
-          },
-          {
-            [RDFC.Reader]: empty<Cont>(),
-            [RDFC.Writer]: empty<Cont>(),
-          },
-        )
-        this.quads = quads
-      } catch (ex: unknown) {
-        this.logger.error('Pipeline failed: ' + JSON.stringify(ex))
-      }
+      this.handlePipeline(msg.pipeline)
     }
 
     if (msg.processed) {
       this.writers[msg.processed.uri].handled()
+    }
+  }
+
+  private handleClose(close: Close) {
+    const uri = close.channel
+    const r = this.readers[uri]
+    if (r) {
+      r.close()
+    }
+
+    const w = this.writers[uri]
+    if (w) {
+      w.close(true)
+    }
+  }
+
+  private handlePipeline(pipeline: string) {
+    try {
+      const quads = new Parser().parse(pipeline)
+      this.shapes = extractShapes(
+        quads,
+        {
+          [RDFC.Reader]: (x: Cont) => this.createReader(x.id),
+          [RDFC.Writer]: (x: Cont) => this.createWriter(x.id),
+        },
+        {
+          [RDFC.Reader]: empty<Cont>(),
+          [RDFC.Writer]: empty<Cont>(),
+        },
+      )
+      this.quads = quads
+    } catch (ex: unknown) {
+      this.logger.error('Pipeline failed: ' + JSON.stringify(ex))
+    }
+  }
+
+  private handleMsg(msg: Message) {
+    this.logger.debug('Handling data msg for ' + msg.channel)
+    const r = this.readers[msg.channel]
+
+    if (r) {
+      r.handleMsg(msg)
     }
   }
 }

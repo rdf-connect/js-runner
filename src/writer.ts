@@ -46,6 +46,11 @@ export class WriterInstance implements Writer {
     this.logger = logger
     this.runnerId = runnerId
   }
+
+  private awaitProcessed(): Promise<void> {
+    return new Promise((res) => this.awaitingProcessed.push(res))
+  }
+
   async any(any: Any): Promise<void> {
     if ('stream' in any) {
       await this.stream(any.stream)
@@ -60,12 +65,11 @@ export class WriterInstance implements Writer {
 
   async buffer(buffer: Uint8Array): Promise<void> {
     this.logger.debug(`${this.uri} sends buffer ${buffer.length} bytes`)
-    const t = this.tick
-    this.tick += 1
-    const o = new Promise((res) => this.awaitingProcessed.push(() => res(null)))
-    await this.write({ msg: { data: buffer, channel: this.uri, tick: t } })
+    const tick = this.tick++
+    const handledPromise = this.awaitProcessed()
 
-    await o
+    await this.write({ msg: { data: buffer, channel: this.uri, tick: tick } })
+    await handledPromise
   }
 
   async stream<T = Uint8Array>(
@@ -76,9 +80,9 @@ export class WriterInstance implements Writer {
     const t = transform || ((x: unknown) => <Uint8Array>x)
     const stream = this.client.sendStreamMessage()
 
+    const handledPromise = this.awaitProcessed()
     const write = promisify(stream.write.bind(stream))
-    const tick = this.tick
-    this.tick += 1
+    const tick = this.tick++
     await write({ id: { channel: this.uri, tick, runner: this.runnerId } })
 
     const id: Id = await new Promise((res) => stream.once('data', res))
@@ -94,7 +98,7 @@ export class WriterInstance implements Writer {
 
     stream.end()
 
-    await new Promise((res) => this.awaitingProcessed.push(() => res(null)))
+    await handledPromise
 
     this.openStreams -= 1
 
@@ -103,17 +107,19 @@ export class WriterInstance implements Writer {
 
   async string(msg: string): Promise<void> {
     this.logger.debug(`${this.uri} sends string ${msg.length} characters`)
-    const t = this.tick
-    this.tick += 1
-    const o = new Promise((res) => this.awaitingProcessed.push(() => res(null)))
+    const tick = this.tick++
+    const handledPromise = this.awaitProcessed()
+
     await this.write({
-      msg: { data: encoder.encode(msg), channel: this.uri, tick: t },
+      msg: { data: encoder.encode(msg), channel: this.uri, tick },
     })
-    await o
+
+    await handledPromise
   }
 
   async close(issued = false): Promise<void> {
     if (this.openStreams != 0) {
+      // Someone wants to close the channel, but there is still a streaming message busy
       let res: () => void
       const out = new Promise((cb) => (res = () => cb(null)))
       this.shouldClose.push(res!)
@@ -133,6 +139,9 @@ export class WriterInstance implements Writer {
     }
   }
 
+  /**
+   * A message is handled, let's notify the fifo {@link awaitProcessed}
+   */
   handled(): void {
     if (this.awaitingProcessed.length > 0) {
       this.awaitingProcessed.shift()!()

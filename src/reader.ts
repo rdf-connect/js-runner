@@ -102,7 +102,7 @@ export class ReaderInstance implements Reader {
   private logger: winston.Logger
   private readonly write: Writable
 
-  private iterators: MyIter<unknown>[] = []
+  private consumers: MyIter<unknown>[] = []
 
   constructor(
     uri: string,
@@ -118,25 +118,25 @@ export class ReaderInstance implements Reader {
 
   anys(): AsyncIterable<Any> {
     const iter = new MyIter(AnyConvertor)
-    this.iterators.push(iter)
+    this.consumers.push(iter)
     return iter
   }
 
   strings(): AsyncIterable<string> {
     const iter = new MyIter(StringConvertor)
-    this.iterators.push(iter)
+    this.consumers.push(iter)
     return iter
   }
 
   buffers(): AsyncIterable<Uint8Array> {
     const iter = new MyIter(NoConvertor)
-    this.iterators.push(iter)
+    this.consumers.push(iter)
     return iter
   }
 
   streams(): AsyncIterable<AsyncGenerator<Uint8Array>> {
     const iter = new MyIter(StreamConvertor)
-    this.iterators.push(iter)
+    this.consumers.push(iter)
     return iter
   }
 
@@ -144,7 +144,7 @@ export class ReaderInstance implements Reader {
     this.logger.debug(`${this.uri} handling message`)
 
     const promises = []
-    for (const iter of this.iterators) {
+    for (const iter of this.consumers) {
       promises.push(new Promise((res) => iter.push(msg.data, () => res(null))))
     }
 
@@ -154,38 +154,49 @@ export class ReaderInstance implements Reader {
   }
 
   close() {
-    for (const iter of this.iterators) {
+    for (const iter of this.consumers) {
       iter.close(() => {})
     }
   }
 
-  async handleStreamingMessage(msg: StreamMessage) {
+  // There is a stream message available for this reader
+  async handleStreamingMessage({ id, tick }: StreamMessage) {
     this.logger.debug(`${this.uri} handling streaming message`)
-    const id = { id: msg.id }
+
     const chunks = this.client.receiveStreamMessage()
-
     const write = promisify(chunks.write.bind(chunks))
+    const consumersConsumed = []
 
-    const promises = []
+    // After each chunk is handled by all consumer, emit a processed message
     let idx = 0
+    const messageIterators = fanoutStream(
+      chunks,
+      this.consumers.length,
+      async () => {
+        await write({ processed: idx++ })
+      },
+    )
 
-    const iters = fanoutStream(chunks, this.iterators.length, async () => {
-      await write({ processed: idx++ })
-    })
-    for (const iter of this.iterators) {
-      promises.push(
-        new Promise((res) => iter.pushStream(iters.pop()!, () => res(null))),
+    for (const consumer of this.consumers) {
+      consumersConsumed.push(
+        new Promise((res) =>
+          consumer.pushStream(messageIterators.pop()!, () => res(null)),
+        ),
       )
     }
 
-    await write({ id })
+    await write({ id: { id } })
 
-    Promise.all(promises).then(() =>
-      this.write({ processed: { tick: msg.tick, uri: this.uri } }),
+    Promise.all(consumersConsumed).then(() =>
+      this.write({ processed: { tick: tick, uri: this.uri } }),
     )
   }
 }
 
+/**
+ * Helper function to tee a stream `numConumsers` times
+ * When each tee'd stream has handled a chunk, call {@link onAllHandled}
+ */
 function fanoutStream<T>(
   stream: ClientReadableStream<T>,
   numConsumers: number,
