@@ -16,7 +16,8 @@ type MatchObject<Req, Res, T> = {
 let count = 0
 export class MockClientDuplexStream<Req, Res>
   extends Duplex
-  implements ClientDuplexStream<Req, Res> {
+  implements ClientDuplexStream<Req, Res>
+{
   private capabilities: Array<MatchObject<Req, Res, unknown>> = []
   private onceCapabilities: Array<MatchObject<Req, Res, unknown>> = []
 
@@ -33,7 +34,7 @@ export class MockClientDuplexStream<Req, Res>
   }
 
   // ---- SurfaceCall stubs ----
-  cancel(): void { }
+  cancel(): void {}
   getPeer(): string {
     return 'mock-peer'
   }
