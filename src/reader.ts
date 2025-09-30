@@ -150,7 +150,9 @@ export class ReaderInstance implements Reader {
     }
 
     Promise.all(promises).then(() =>
-      this.notifyOrchestrator({ processed: { tick: msg.tick, channel: this.uri } }),
+      this.notifyOrchestrator({
+        processed: { tick: msg.tick, channel: this.uri },
+      }),
     )
   }
 
@@ -165,7 +167,7 @@ export class ReaderInstance implements Reader {
     this.logger.debug(`${this.uri} handling streaming message`)
 
     const chunks = this.client.receiveStreamMessage()
-    const write = promisify(chunks.write.bind(chunks))
+    const writeControlMessage = promisify(chunks.write.bind(chunks))
     const consumersConsumed = []
 
     // After each chunk is handled by all consumer, emit a processed message
@@ -174,7 +176,7 @@ export class ReaderInstance implements Reader {
       chunks,
       this.consumers.length,
       async () => {
-        await write({ processed: idx++ })
+        await writeControlMessage({ processed: idx++ })
       },
     )
 
@@ -186,13 +188,12 @@ export class ReaderInstance implements Reader {
       )
     }
 
-    await write({ id });
+    await writeControlMessage({ id })
 
     Promise.all(consumersConsumed).then(() => {
-      console.log("Writing processed for streaming message");
-      this.notifyOrchestrator({ processed: { tick: tick, channel: this.uri } });
-    }
-    )
+      console.log('Writing processed for streaming message')
+      this.notifyOrchestrator({ processed: { tick: tick, channel: this.uri } })
+    })
   }
 }
 
