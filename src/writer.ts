@@ -87,7 +87,9 @@ export class WriterInstance implements Writer {
 
     const id = await new Promise((res) => stream.once('data', res))
 
-    this.logger.debug(`${this.uri} streams message with id ${JSON.stringify(id)}`)
+    this.logger.debug(
+      `${this.uri} streams message with id ${JSON.stringify(id)}`,
+    )
 
     for await (const msg of buffer) {
       const processedPromise = new Promise((res) => stream.once('data', res))
@@ -117,25 +119,36 @@ export class WriterInstance implements Writer {
     await handledPromise
   }
 
+  /**
+     * Gracefully closes this channel.
+     *
+     * Behavior:
+     * - If there are still active streams, closing is deferred until they complete.
+     * - If multiple callers invoke `close()` while waiting, their Promises are queued and
+     *   resolved once the channel actually closes.
+     * - If this side initiated the close (`issued = false`), a close message is sent to the remote.
+     *
+     * @param issued - If true, indicates the close request originated remotely
+     */
   async close(issued = false): Promise<void> {
-    if (this.openStreams != 0) {
-      // Someone wants to close the channel, but there is still a streaming message busy
-      let res: () => void
-      const out = new Promise((cb) => (res = () => cb(null)))
-      this.shouldClose.push(res!)
-      await out
-    } else {
-      this.logger.debug(`${this.uri} closes stream`)
-      if (!issued) {
-        await this.write({
-          close: { channel: this.uri },
-        })
-      }
-      if (this.shouldClose.length > 0) {
-        for (const cb of this.shouldClose) {
-          cb()
-        }
-      }
+    // Case 1: Active streams still running → wait until they finish
+    if (this.openStreams !== 0) {
+      await new Promise<void>((resolve) => this.shouldClose.push(resolve))
+      return
+    }
+
+    // Case 2: No active streams → perform actual close
+    this.logger.debug(`${this.uri} closes stream`)
+    if (!issued) {
+      await this.write({
+        close: { channel: this.uri },
+      })
+    }
+
+    let resolve = this.shouldClose.pop();
+    while (resolve) {
+      resolve();
+      resolve = this.shouldClose.pop();
     }
   }
 

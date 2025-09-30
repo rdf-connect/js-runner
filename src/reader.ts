@@ -62,7 +62,7 @@ class MyIter<T> implements AsyncIterable<T> {
   }
 
   async pushStream(chunks: AsyncIterable<DataChunk>, onComplete: () => void) {
-    // This is an asyhc generator that
+    // This is an async generator that transforms DataChunks to Buffers
     const stream = (async function*(stream) {
       for await (const c of stream) {
         const chunk: DataChunk = c
@@ -87,7 +87,8 @@ class MyIter<T> implements AsyncIterable<T> {
           break
         }
         yield item
-        // The generator only returns execution on the next `next` call on the generator
+        // Note: execution pauses at `yield` until the consumer calls `.next()` again.
+        // We call onComplete *after* resuming, so the producer knows the item was actually consumed.
         onComplete()
       } else {
         await new Promise<undefined>((resolve) => (this.resolveNext = resolve))
@@ -100,20 +101,20 @@ export class ReaderInstance implements Reader {
   private client: RunnerClient
   readonly uri: string
   private logger: winston.Logger
-  private readonly write: Writable
+  private readonly notifyOrchestrator: Writable
 
   private consumers: MyIter<unknown>[] = []
 
   constructor(
     uri: string,
     client: RunnerClient,
-    write: Writable,
+    notifyOrchestrator: Writable,
     logger: winston.Logger,
   ) {
     this.uri = uri
     this.client = client
     this.logger = logger
-    this.write = write
+    this.notifyOrchestrator = notifyOrchestrator
   }
 
   anys(): AsyncIterable<Any> {
@@ -149,7 +150,7 @@ export class ReaderInstance implements Reader {
     }
 
     Promise.all(promises).then(() =>
-      this.write({ processed: { tick: msg.tick, channel: this.uri } }),
+      this.notifyOrchestrator({ processed: { tick: msg.tick, channel: this.uri } }),
     )
   }
 
@@ -185,16 +186,18 @@ export class ReaderInstance implements Reader {
       )
     }
 
-    await write({ id })
+    await write({ id });
 
-    Promise.all(consumersConsumed).then(() =>
-      this.write({ processed: { tick: tick, channel: this.uri } }),
+    Promise.all(consumersConsumed).then(() => {
+      console.log("Writing processed for streaming message");
+      this.notifyOrchestrator({ processed: { tick: tick, channel: this.uri } });
+    }
     )
   }
 }
 
 /**
- * Helper function to tee a stream `numConumsers` times
+ * Helper function to tee a stream `numConsumers` times
  * When each tee'd stream has handled a chunk, call {@link onAllHandled}
  */
 function fanoutStream<T>(

@@ -8,20 +8,13 @@
 @prefix sh: <http://www.w3.org/ns/shacl#>.
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
 
-rdfc:JsRunner a rdfc:CommandRunner;
-  rdfc:handles rdfc:JsProcessor;
-  rdfc:command "node node_modules/@rdfc/js-runner/bin/runner.js";
-  rdfc:processor_definition <JsProcessorShape>.
-
 rdfc:NodeRunner a rdfc:Runner;
   rdfc:handlesSubjectsOf rdfc:jsImplementationOf;
-  rdfc:command "npx js-runner";
-  rdfc:processor_definition <JsProcessorShape>.
+  rdfc:command "npx js-runner".
 
 rdfc:BunRunner a rdfc:Runner;
   rdfc:handlesSubjectsOf rdfc:jsImplementationOf;
-  rdfc:command "bunx js-runner";
-  rdfc:processor_definition <JsProcessorShape>.
+  rdfc:command "bunx js-runner".
 
 sds:Activity rdfs:subClassOf prov:Activity.
 rdfc:Processor rdfs:subClassOf sds:Activity.
