@@ -5,6 +5,7 @@ import {
   Processor,
   RunnerClient,
   RunnerMessage,
+  StreamMessage,
 } from '@rdfc/proto'
 import { Reader, ReaderInstance } from './reader'
 import { Writer, WriterInstance } from './writer'
@@ -17,6 +18,7 @@ import { Cont, empty, extractShapes, Shapes } from 'rdf-lens'
 import { NamedNode, Parser } from 'n3'
 import { createNamespace, createUriAndTermNamespace, RDF } from '@treecg/types'
 import { Quad, Term } from '@rdfjs/types'
+import { MessageProcessed } from '@rdfc/proto/lib/generated/common'
 
 const RDFL = createUriAndTermNamespace(
   'https://w3id.org/rdf-lens/ontology#',
@@ -81,7 +83,7 @@ export class Runner {
       transports: [
         new RpcTransport({
           entities: [proc.uri, this.uri],
-          stream: this.client.logStream(() => {}),
+          stream: this.client.logStream(() => { }),
         }),
       ],
     })
@@ -158,8 +160,7 @@ export class Runner {
     }
 
     if (msg.streamMsg) {
-      const r = this.readers[msg.streamMsg.channel]
-      await r.handleStreamingMessage(msg.streamMsg)
+      this.handleStreamMsg(msg.streamMsg)
     }
 
     if (msg.close) {
@@ -171,20 +172,27 @@ export class Runner {
     }
 
     if (msg.processed) {
-      this.writers[msg.processed.channel].handled()
+      this.handleProcessed(msg.processed);
     }
   }
 
   private handleClose(close: Close) {
     const uri = close.channel
     const r = this.readers[uri]
+
+    let closed = false;
     if (r) {
       r.close()
+      closed = true
     }
-
     const w = this.writers[uri]
     if (w) {
+      closed = true;
       w.close(true)
+    }
+
+    if (!closed) {
+      this.logger.error(`Received a close event for channel ${uri}, but neither reader or writer is present.`)
     }
   }
 
@@ -214,6 +222,27 @@ export class Runner {
 
     if (r) {
       r.handleMsg(msg)
+    } else {
+      this.logger.error(`Received message for channel ${msg.channel}, but no reader was present.`)
+    }
+  }
+
+  private handleStreamMsg(streamMsg: StreamMessage) {
+    const r = this.readers[streamMsg.channel]
+
+    if (r) {
+      r.handleStreamingMessage(streamMsg)
+    } else {
+      this.logger.error(`Received stream message for channel ${streamMsg.channel}, but no reader was present.`)
+    }
+  }
+
+  private handleProcessed(processed: MessageProcessed) {
+    const writer = this.writers[processed.channel];
+    if (writer) {
+      writer.handled();
+    } else {
+      this.logger.error(`Received processed message for channel ${processed.channel}, but no writer was present.`)
     }
   }
 }
