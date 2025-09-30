@@ -13,14 +13,14 @@ import { promisify } from 'util'
 
 export type Any =
   | {
-    string: string
-  }
+      string: string
+    }
   | {
-    stream: AsyncGenerator<Uint8Array>
-  }
+      stream: AsyncGenerator<Uint8Array>
+    }
   | {
-    buffer: Uint8Array
-  }
+      buffer: Uint8Array
+    }
 
 export interface Reader {
   readonly uri: string
@@ -63,7 +63,7 @@ class MyIter<T> implements AsyncIterable<T> {
 
   async pushStream(chunks: AsyncIterable<DataChunk>, onComplete: () => void) {
     // This is an async generator that transforms DataChunks to Buffers
-    const stream = (async function*(stream) {
+    const stream = (async function* (stream) {
       for await (const c of stream) {
         const chunk: DataChunk = c
         yield chunk.data
@@ -158,7 +158,7 @@ export class ReaderInstance implements Reader {
 
   close() {
     for (const iter of this.consumers) {
-      iter.close(() => { })
+      iter.close(() => {})
     }
   }
 

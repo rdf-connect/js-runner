@@ -83,7 +83,7 @@ export class Runner {
       transports: [
         new RpcTransport({
           entities: [proc.uri, this.uri],
-          stream: this.client.logStream(() => { }),
+          stream: this.client.logStream(() => {}),
         }),
       ],
     })
@@ -149,7 +149,12 @@ export class Runner {
     if (this.readers[ids] !== undefined) {
       return this.readers[ids]
     }
-    const reader = new ReaderInstance(ids, this.client, this.notifyOrchestrator, this.logger)
+    const reader = new ReaderInstance(
+      ids,
+      this.client,
+      this.notifyOrchestrator,
+      this.logger,
+    )
     this.readers[ids] = reader
     return reader
   }

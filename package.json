@@ -31,6 +31,7 @@
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@rdfjs/types": "^2.0.1",
+    "@grpc/grpc-js": "^1.12.6",
     "@types/jest": "^29.5.14",
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.21.1",

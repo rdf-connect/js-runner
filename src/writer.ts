@@ -68,7 +68,9 @@ export class WriterInstance implements Writer {
     const tick = this.tick++
     const handledPromise = this.awaitProcessed()
 
-    await this.notifyOrchestrator({ msg: { data: buffer, channel: this.uri, tick: tick } })
+    await this.notifyOrchestrator({
+      msg: { data: buffer, channel: this.uri, tick: tick },
+    })
     await handledPromise
   }
 
@@ -83,7 +85,9 @@ export class WriterInstance implements Writer {
     const handledPromise = this.awaitProcessed()
     const writeStreamMessageChunk = promisify(stream.write.bind(stream))
     const tick = this.tick++
-    await writeStreamMessageChunk({ id: { channel: this.uri, tick, runner: this.runnerId } })
+    await writeStreamMessageChunk({
+      id: { channel: this.uri, tick, runner: this.runnerId },
+    })
 
     const id = await new Promise((res) => stream.once('data', res))
 
@@ -161,7 +165,7 @@ export class WriterInstance implements Writer {
     } else {
       this.logger.error(
         'Expected to be waiting for a message to be processed, but this is not the case ' +
-        this.uri,
+          this.uri,
       )
     }
   }
