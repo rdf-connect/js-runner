@@ -54,7 +54,7 @@ export class Runner {
   private readonly readers: { [uri: string]: ReaderInstance } = {}
   private readonly writers: { [uri: string]: WriterInstance } = {}
   private readonly client: RunnerClient
-  private readonly write: Writable
+  private readonly notifyOrchestrator: Writable
   private readonly logger: Logger
   private shapes: Shapes
   private quads: Quad[] = []
@@ -66,12 +66,12 @@ export class Runner {
 
   constructor(
     client: RunnerClient,
-    write: Writable,
+    notifyOrchestrator: Writable,
     uri: string,
     logger: Logger,
   ) {
     this.client = client
-    this.write = write
+    this.notifyOrchestrator = notifyOrchestrator
     this.uri = uri
     this.logger = logger
   }
@@ -112,7 +112,7 @@ export class Runner {
     this.processors.push(instance)
     this.processorTransforms.push(instance.transform())
 
-    await this.write({ init: { uri: proc.uri } })
+    await this.notifyOrchestrator({ init: { uri: proc.uri } })
 
     return <FullProc<P>>instance
   }
@@ -135,7 +135,7 @@ export class Runner {
     const writer = new WriterInstance(
       id,
       this.client,
-      this.write,
+      this.notifyOrchestrator,
       this.uri,
       this.logger,
     )
@@ -149,7 +149,7 @@ export class Runner {
     if (this.readers[ids] !== undefined) {
       return this.readers[ids]
     }
-    const reader = new ReaderInstance(ids, this.client, this.write, this.logger)
+    const reader = new ReaderInstance(ids, this.client, this.notifyOrchestrator, this.logger)
     this.readers[ids] = reader
     return reader
   }
@@ -172,7 +172,7 @@ export class Runner {
     }
 
     if (msg.processed) {
-      this.handleProcessed(msg.processed);
+      this.handleProcessed(msg.processed)
     }
   }
 
@@ -180,19 +180,21 @@ export class Runner {
     const uri = close.channel
     const r = this.readers[uri]
 
-    let closed = false;
+    let closed = false
     if (r) {
       r.close()
       closed = true
     }
     const w = this.writers[uri]
     if (w) {
-      closed = true;
+      closed = true
       w.close(true)
     }
 
     if (!closed) {
-      this.logger.error(`Received a close event for channel ${uri}, but neither reader or writer is present.`)
+      this.logger.error(
+        `Received a close event for channel ${uri}, but neither reader or writer is present.`,
+      )
     }
   }
 
@@ -223,7 +225,9 @@ export class Runner {
     if (r) {
       r.handleMsg(msg)
     } else {
-      this.logger.error(`Received message for channel ${msg.channel}, but no reader was present.`)
+      this.logger.error(
+        `Received message for channel ${msg.channel}, but no reader was present.`,
+      )
     }
   }
 
@@ -233,16 +237,20 @@ export class Runner {
     if (r) {
       r.handleStreamingMessage(streamMsg)
     } else {
-      this.logger.error(`Received stream message for channel ${streamMsg.channel}, but no reader was present.`)
+      this.logger.error(
+        `Received stream message for channel ${streamMsg.channel}, but no reader was present.`,
+      )
     }
   }
 
   private handleProcessed(processed: MessageProcessed) {
-    const writer = this.writers[processed.channel];
+    const writer = this.writers[processed.channel]
     if (writer) {
-      writer.handled();
+      writer.handled()
     } else {
-      this.logger.error(`Received processed message for channel ${processed.channel}, but no writer was present.`)
+      this.logger.error(
+        `Received processed message for channel ${processed.channel}, but no writer was present.`,
+      )
     }
   }
 }

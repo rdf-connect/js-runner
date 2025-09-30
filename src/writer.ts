@@ -23,7 +23,7 @@ export class WriterInstance implements Writer {
   readonly uri: string
   tick: number = 0
   private readonly client: RunnerClient
-  private readonly write: Writable
+  private readonly notifyOrchestrator: Writable
   private readonly logger: Logger
 
   private awaitingProcessed: Array<() => void> = []
@@ -36,12 +36,12 @@ export class WriterInstance implements Writer {
   constructor(
     uri: string,
     client: RunnerClient,
-    write: Writable,
+    notifyOrchestrator: Writable,
     runnerId: string,
     logger: Logger,
   ) {
     this.client = client
-    this.write = write
+    this.notifyOrchestrator = notifyOrchestrator
     this.uri = uri
     this.logger = logger
     this.runnerId = runnerId
@@ -68,7 +68,7 @@ export class WriterInstance implements Writer {
     const tick = this.tick++
     const handledPromise = this.awaitProcessed()
 
-    await this.write({ msg: { data: buffer, channel: this.uri, tick: tick } })
+    await this.notifyOrchestrator({ msg: { data: buffer, channel: this.uri, tick: tick } })
     await handledPromise
   }
 
@@ -81,9 +81,9 @@ export class WriterInstance implements Writer {
     const stream = this.client.sendStreamMessage()
 
     const handledPromise = this.awaitProcessed()
-    const write = promisify(stream.write.bind(stream))
+    const writeStreamMessageChunk = promisify(stream.write.bind(stream))
     const tick = this.tick++
-    await write({ id: { channel: this.uri, tick, runner: this.runnerId } })
+    await writeStreamMessageChunk({ id: { channel: this.uri, tick, runner: this.runnerId } })
 
     const id = await new Promise((res) => stream.once('data', res))
 
@@ -93,7 +93,7 @@ export class WriterInstance implements Writer {
 
     for await (const msg of buffer) {
       const processedPromise = new Promise((res) => stream.once('data', res))
-      await write({ data: { data: t(msg) } })
+      await writeStreamMessageChunk({ data: { data: t(msg) } })
       // Await a message on the stream, indicating that the chunk has been processed
       await processedPromise
     }
@@ -112,7 +112,7 @@ export class WriterInstance implements Writer {
     const tick = this.tick++
     const handledPromise = this.awaitProcessed()
 
-    await this.write({
+    await this.notifyOrchestrator({
       msg: { data: encoder.encode(msg), channel: this.uri, tick },
     })
 
@@ -120,16 +120,16 @@ export class WriterInstance implements Writer {
   }
 
   /**
-     * Gracefully closes this channel.
-     *
-     * Behavior:
-     * - If there are still active streams, closing is deferred until they complete.
-     * - If multiple callers invoke `close()` while waiting, their Promises are queued and
-     *   resolved once the channel actually closes.
-     * - If this side initiated the close (`issued = false`), a close message is sent to the remote.
-     *
-     * @param issued - If true, indicates the close request originated remotely
-     */
+   * Gracefully closes this channel.
+   *
+   * Behavior:
+   * - If there are still active streams, closing is deferred until they complete.
+   * - If multiple callers invoke `close()` while waiting, their Promises are queued and
+   *   resolved once the channel actually closes.
+   * - If this side initiated the close (`issued = false`), a close message is sent to the remote.
+   *
+   * @param issued - If true, indicates the close request originated remotely
+   */
   async close(issued = false): Promise<void> {
     // Case 1: Active streams still running → wait until they finish
     if (this.openStreams !== 0) {
@@ -140,15 +140,15 @@ export class WriterInstance implements Writer {
     // Case 2: No active streams → perform actual close
     this.logger.debug(`${this.uri} closes stream`)
     if (!issued) {
-      await this.write({
+      await this.notifyOrchestrator({
         close: { channel: this.uri },
       })
     }
 
-    let resolve = this.shouldClose.pop();
+    let resolve = this.shouldClose.pop()
     while (resolve) {
-      resolve();
-      resolve = this.shouldClose.pop();
+      resolve()
+      resolve = this.shouldClose.pop()
     }
   }
 
