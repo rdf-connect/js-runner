@@ -21,7 +21,7 @@ export interface Writer {
 const encoder = new TextEncoder()
 export class WriterInstance implements Writer {
   readonly uri: string
-  tick: number = 0
+  localSequenceNumber: number = 1
   private readonly client: RunnerClient
   private readonly notifyOrchestrator: Writable
   private readonly logger: Logger
@@ -65,11 +65,11 @@ export class WriterInstance implements Writer {
 
   async buffer(buffer: Uint8Array): Promise<void> {
     this.logger.debug(`${this.uri} sends buffer ${buffer.length} bytes`)
-    const tick = this.tick++
+    const localSequenceNumber = this.localSequenceNumber++
     const handledPromise = this.awaitProcessed()
 
     await this.notifyOrchestrator({
-      msg: { data: buffer, channel: this.uri, localSequenceNumber: tick },
+      msg: { data: buffer, channel: this.uri, localSequenceNumber },
     })
     await handledPromise
   }
@@ -84,11 +84,11 @@ export class WriterInstance implements Writer {
 
     const handledPromise = this.awaitProcessed()
     const writeStreamMessageChunk = promisify(stream.write.bind(stream))
-    const tick = this.tick++
+    const localSequenceNumber = this.localSequenceNumber++
     await writeStreamMessageChunk({
       id: {
         channel: this.uri,
-        localSequenceNumber: tick,
+        localSequenceNumber,
         runner: this.runnerId,
       },
     })
@@ -117,14 +117,14 @@ export class WriterInstance implements Writer {
 
   async string(msg: string): Promise<void> {
     this.logger.debug(`${this.uri} sends string ${msg.length} characters`)
-    const tick = this.tick++
+    const localSequenceNumber = this.localSequenceNumber++
     const handledPromise = this.awaitProcessed()
 
     await this.notifyOrchestrator({
       msg: {
         data: encoder.encode(msg),
         channel: this.uri,
-        localSequenceNumber: tick,
+        localSequenceNumber,
       },
     })
 
@@ -173,7 +173,7 @@ export class WriterInstance implements Writer {
     } else {
       this.logger.error(
         'Expected to be waiting for a message to be processed, but this is not the case ' +
-          this.uri,
+        this.uri,
       )
     }
   }
