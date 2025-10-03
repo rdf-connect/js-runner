@@ -1,11 +1,11 @@
 import {
   DataChunk,
+  FromRunner,
   LogMessage,
-  RunnerMessage,
   Processor as ProcConfig,
-  StreamControl,
+  ToRunner,
 } from '@rdfc/proto'
-import { OrchestratorMessage } from '../reexports'
+import { } from '../reexports'
 import { extractShapes } from 'rdf-lens'
 import { NamedNode, Parser, Writer as N3Writer } from 'n3'
 import { readFile } from 'fs/promises'
@@ -14,7 +14,12 @@ import { Processor } from '../processor'
 import { FullProc, Runner, Writable } from '../runner'
 import { Quad } from '@rdfjs/types'
 import { createTermNamespace } from '@treecg/types'
-import { StreamChunk, StreamIdentify } from '@rdfc/proto/lib/generated/common'
+import {
+  ReceivingStreamControl,
+  SendingStreamControl,
+  StreamChunk,
+  StreamIdentify,
+} from '@rdfc/proto/lib/generated/common'
 import { MockClientDuplexStream } from './duplex'
 import { promisify } from 'util'
 import { Reader } from '../reader'
@@ -37,45 +42,45 @@ export class StreamMsgMock {
     this.resolveId = resolveId
   }
 
-  sendStreamMessage(): MockClientDuplexStream<StreamChunk, StreamControl> {
+  sendStreamMessage(): MockClientDuplexStream<
+    StreamChunk,
+    ReceivingStreamControl
+  > {
     const sendingStream = new MockClientDuplexStream<
       StreamChunk,
-      StreamControl
+      ReceivingStreamControl
     >()
 
     let at = 0
     sendingStream.register(
       (x) => x.data,
       (d, send) => {
-        setTimeout(() => send({ processed: at++ }), 20)
+        setTimeout(() => send({ streamSequenceNumber: ++at }), 20)
         this.data.push(d)
       },
     )
     sendingStream.register(
       (x) => x.id,
-      (d, send) => send({ id: this.resolveId(d) }),
+      (d, send) => send({ streamSequenceNumber: this.resolveId(d) }),
     )
     return sendingStream
   }
 }
 
 export class OrchestratorMock {
-  connectStream: MockClientDuplexStream<OrchestratorMessage, RunnerMessage>
+  connectStream: MockClientDuplexStream<FromRunner, ToRunner>
 
   streamMsgs: {
     [id: string]: {
-      toProducingStream: (id: StreamControl) => void
-      receivingStream?: MockClientDuplexStream<StreamControl, DataChunk>
+      toProducingStream: (id: ReceivingStreamControl) => void
+      receivingStream?: MockClientDuplexStream<SendingStreamControl, DataChunk>
     }
   } = {}
 
   streamMsgCount = 0
 
-  connect(): MockClientDuplexStream<OrchestratorMessage, RunnerMessage> {
-    const connectStream = new MockClientDuplexStream<
-      OrchestratorMessage,
-      RunnerMessage
-    >()
+  connect(): MockClientDuplexStream<FromRunner, ToRunner> {
+    const connectStream = new MockClientDuplexStream<FromRunner, ToRunner>()
     // Always bounce processed msgs back to the runner
     connectStream.register(
       (msg) => msg.processed,
@@ -87,8 +92,10 @@ export class OrchestratorMock {
     // Always bounce data msgs back to the runner
     connectStream.register(
       (msg) => msg.msg,
-      (msg, send) => {
-        send({ msg })
+      ({ localSequenceNumber, data, channel }, send) => {
+        send({
+          msg: { globalSequenceNumber: localSequenceNumber, channel, data },
+        })
       },
     )
 
@@ -104,18 +111,26 @@ export class OrchestratorMock {
     return connectStream
   }
 
-  sendStreamMessage(): MockClientDuplexStream<StreamChunk, StreamControl> {
-    const out = new MockClientDuplexStream<StreamChunk, StreamControl>()
+  sendStreamMessage(): MockClientDuplexStream<
+    StreamChunk,
+    ReceivingStreamControl
+  > {
+    const out = new MockClientDuplexStream<
+      StreamChunk,
+      ReceivingStreamControl
+    >()
     const id = this.streamMsgCount
     this.streamMsgCount++
 
     out.registerOnce(
       (x) => x.id,
-      ({ channel, tick }, toProducingStream) => {
+      ({ channel }, toProducingStream) => {
         this.streamMsgs[id] = { toProducingStream }
 
         // Notify stream message
-        this.connectStream.send({ streamMsg: { channel, id, tick } })
+        this.connectStream.send({
+          streamMsg: { channel, globalSequenceNumber: id },
+        })
       },
     )
 
@@ -135,27 +150,30 @@ export class OrchestratorMock {
     return out
   }
 
-  receiveStreamMessage(): MockClientDuplexStream<StreamControl, DataChunk> {
+  receiveStreamMessage(): MockClientDuplexStream<
+    SendingStreamControl,
+    DataChunk
+  > {
     const receivingStream = new MockClientDuplexStream<
-      StreamControl,
+      SendingStreamControl,
       DataChunk
     >()
     let streamId = 0
 
     receivingStream.registerOnce(
-      (x) => x.id,
+      (x) => x.globalSequenceNumber,
       (id) => {
         streamId = id
         this.streamMsgs[id].receivingStream = receivingStream
-        this.streamMsgs[id].toProducingStream({ id })
+        this.streamMsgs[id].toProducingStream({ streamSequenceNumber: 0 })
       },
     )
 
     receivingStream.register(
-      (x) => x.processed,
-      (proc) => {
+      (x) => x.streamSequenceNumber,
+      (streamSequenceNumber) => {
         // Bounce processed message to producing stream
-        this.streamMsgs[streamId].toProducingStream({ processed: proc })
+        this.streamMsgs[streamId].toProducingStream({ streamSequenceNumber })
       },
     )
 
@@ -191,7 +209,7 @@ export function createRunner(uri = 'http://example.com/ns#') {
     logger,
   )
 
-  stream.on('data', (msg: RunnerMessage) => runner.handleOrchMessage(msg))
+  stream.on('data', (msg: ToRunner) => runner.handleOrchMessage(msg))
 
   return runner
 }

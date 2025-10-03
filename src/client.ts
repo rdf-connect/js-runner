@@ -1,6 +1,6 @@
 import * as grpc from '@grpc/grpc-js'
 import { promisify } from 'util'
-import { RunnerClient, RunnerMessage } from '@rdfc/proto'
+import { RunnerClient, ToRunner } from '@rdfc/proto'
 import winston from 'winston'
 import { RpcTransport } from './logger'
 import { Runner } from './runner'
@@ -28,7 +28,7 @@ export async function start(addr: string, uri: string) {
   /* eslint-disable no-async-promise-executor */
   await new Promise(async (res) => {
     for await (const chunk of stream) {
-      const msg: RunnerMessage = chunk
+      const msg: ToRunner = chunk
       if (msg.proc) {
         await runner.addProcessor(msg.proc)
       }
