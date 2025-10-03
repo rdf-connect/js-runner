@@ -1,9 +1,9 @@
-import { OrchestratorMessage, RunnerClient } from '@rdfc/proto'
+import { FromRunner, RunnerClient } from '@rdfc/proto'
 import { promisify } from 'util'
 import { Logger } from 'winston'
 import { Any } from './reader'
 
-type Writable = (msg: OrchestratorMessage) => Promise<unknown>
+type Writable = (msg: FromRunner) => Promise<unknown>
 export interface Writer {
   readonly uri: string
   buffer(buffer: Uint8Array): Promise<void>
@@ -69,7 +69,7 @@ export class WriterInstance implements Writer {
     const handledPromise = this.awaitProcessed()
 
     await this.notifyOrchestrator({
-      msg: { data: buffer, channel: this.uri, tick: tick },
+      msg: { data: buffer, channel: this.uri, localSequenceNumber: tick },
     })
     await handledPromise
   }
@@ -86,7 +86,11 @@ export class WriterInstance implements Writer {
     const writeStreamMessageChunk = promisify(stream.write.bind(stream))
     const tick = this.tick++
     await writeStreamMessageChunk({
-      id: { channel: this.uri, tick, runner: this.runnerId },
+      id: {
+        channel: this.uri,
+        localSequenceNumber: tick,
+        runner: this.runnerId,
+      },
     })
 
     const id = await new Promise((res) => stream.once('data', res))
@@ -117,7 +121,11 @@ export class WriterInstance implements Writer {
     const handledPromise = this.awaitProcessed()
 
     await this.notifyOrchestrator({
-      msg: { data: encoder.encode(msg), channel: this.uri, tick },
+      msg: {
+        data: encoder.encode(msg),
+        channel: this.uri,
+        localSequenceNumber: tick,
+      },
     })
 
     await handledPromise

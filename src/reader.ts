@@ -1,5 +1,10 @@
 import { ClientReadableStream } from '@grpc/grpc-js'
-import { DataChunk, Message, RunnerClient, StreamMessage } from '@rdfc/proto'
+import {
+  DataChunk,
+  ReceivingMessage,
+  ReceivingStreamMessage,
+  RunnerClient,
+} from '@rdfc/proto'
 import winston from 'winston'
 import {
   AnyConvertor,
@@ -141,7 +146,7 @@ export class ReaderInstance implements Reader {
     return iter
   }
 
-  handleMsg(msg: Message) {
+  handleMsg(msg: ReceivingMessage) {
     this.logger.debug(`${this.uri} handling message`)
 
     const promises = []
@@ -151,7 +156,10 @@ export class ReaderInstance implements Reader {
 
     Promise.all(promises).then(() =>
       this.notifyOrchestrator({
-        processed: { tick: msg.tick, channel: this.uri },
+        processed: {
+          globalSequenceNumber: msg.globalSequenceNumber,
+          channel: this.uri,
+        },
       }),
     )
   }
@@ -163,7 +171,10 @@ export class ReaderInstance implements Reader {
   }
 
   // There is a stream message available for this reader
-  async handleStreamingMessage({ id, tick }: StreamMessage) {
+  async handleStreamingMessage({
+    channel,
+    globalSequenceNumber,
+  }: ReceivingStreamMessage) {
     this.logger.debug(`${this.uri} handling streaming message`)
 
     const chunks = this.client.receiveStreamMessage()
@@ -176,7 +187,7 @@ export class ReaderInstance implements Reader {
       chunks,
       this.consumers.length,
       async () => {
-        await writeControlMessage({ processed: idx++ })
+        await writeControlMessage({ streamSequenceNumber: idx++ })
       },
     )
 
@@ -188,11 +199,11 @@ export class ReaderInstance implements Reader {
       )
     }
 
-    await writeControlMessage({ id })
+    await writeControlMessage({ globalSequenceNumber })
 
     Promise.all(consumersConsumed).then(() => {
       console.log('Writing processed for streaming message')
-      this.notifyOrchestrator({ processed: { tick: tick, channel: this.uri } })
+      this.notifyOrchestrator({ processed: { globalSequenceNumber, channel } })
     })
   }
 }

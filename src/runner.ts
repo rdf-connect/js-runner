@@ -1,11 +1,9 @@
 import {
   Close,
-  Message,
-  OrchestratorMessage,
+  FromRunner,
   Processor,
   RunnerClient,
-  RunnerMessage,
-  StreamMessage,
+  ToRunner,
 } from '@rdfc/proto'
 import { Reader, ReaderInstance } from './reader'
 import { Writer, WriterInstance } from './writer'
@@ -18,7 +16,11 @@ import { Cont, empty, extractShapes, Shapes } from 'rdf-lens'
 import { NamedNode, Parser } from 'n3'
 import { createNamespace, createUriAndTermNamespace, RDF } from '@treecg/types'
 import { Quad, Term } from '@rdfjs/types'
-import { MessageProcessed } from '@rdfc/proto/lib/generated/common'
+import {
+  MessageProcessed,
+  ReceivingMessage,
+  ReceivingStreamMessage,
+} from '@rdfc/proto/lib/generated/common'
 
 const RDFL = createUriAndTermNamespace(
   'https://w3id.org/rdf-lens/ontology#',
@@ -40,7 +42,7 @@ const RDFC = createNamespace(
   'Writer',
 )
 
-export type Writable = (msg: OrchestratorMessage) => Promise<unknown>
+export type Writable = (msg: FromRunner) => Promise<unknown>
 
 type ProcessorConfig = {
   location: string
@@ -112,7 +114,7 @@ export class Runner {
     this.processors.push(instance)
     this.processorTransforms.push(instance.transform())
 
-    await this.notifyOrchestrator({ init: { uri: proc.uri } })
+    await this.notifyOrchestrator({ initialized: { uri: proc.uri } })
 
     return <FullProc<P>>instance
   }
@@ -159,7 +161,7 @@ export class Runner {
     return reader
   }
 
-  async handleOrchMessage(msg: RunnerMessage) {
+  async handleOrchMessage(msg: ToRunner) {
     if (msg.msg) {
       this.handleMsg(msg.msg)
     }
@@ -223,7 +225,7 @@ export class Runner {
     }
   }
 
-  private handleMsg(msg: Message) {
+  private handleMsg(msg: ReceivingMessage) {
     this.logger.debug('Handling data msg for ' + msg.channel)
     const r = this.readers[msg.channel]
 
@@ -236,7 +238,7 @@ export class Runner {
     }
   }
 
-  private handleStreamMsg(streamMsg: StreamMessage) {
+  private handleStreamMsg(streamMsg: ReceivingStreamMessage) {
     const r = this.readers[streamMsg.channel]
 
     if (r) {
