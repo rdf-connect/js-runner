@@ -173,7 +173,7 @@ export class WriterInstance implements Writer {
     } else {
       this.logger.error(
         'Expected to be waiting for a message to be processed, but this is not the case ' +
-        this.uri,
+          this.uri,
       )
     }
   }
