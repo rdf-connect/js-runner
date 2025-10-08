@@ -5,7 +5,7 @@ import {
   Processor as ProcConfig,
   ToRunner,
 } from '@rdfc/proto'
-import { } from '../reexports'
+import {} from '../reexports'
 import { extractShapes } from 'rdf-lens'
 import { NamedNode, Parser, Writer as N3Writer } from 'n3'
 import { readFile } from 'fs/promises'
@@ -85,7 +85,9 @@ export class OrchestratorMock {
     connectStream.register(
       (msg) => msg.processed,
       ({ channel, globalSequenceNumber }, send) => {
-        send({ processed: { channel, localSequenceNumber: globalSequenceNumber } })
+        send({
+          processed: { channel, localSequenceNumber: globalSequenceNumber },
+        })
       },
     )
 
