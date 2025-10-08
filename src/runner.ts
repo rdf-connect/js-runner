@@ -17,7 +17,7 @@ import { NamedNode, Parser } from 'n3'
 import { createNamespace, createUriAndTermNamespace, RDF } from '@treecg/types'
 import { Quad, Term } from '@rdfjs/types'
 import {
-  MessageProcessed,
+  LocalAck,
   ReceivingMessage,
   ReceivingStreamMessage,
 } from '@rdfc/proto/lib/generated/common'
@@ -85,7 +85,7 @@ export class Runner {
       transports: [
         new RpcTransport({
           entities: [proc.uri, this.uri],
-          stream: this.client.logStream(() => {}),
+          stream: this.client.logStream(() => { }),
         }),
       ],
     })
@@ -250,7 +250,7 @@ export class Runner {
     }
   }
 
-  private handleProcessed(processed: MessageProcessed) {
+  private handleProcessed(processed: LocalAck) {
     const writer = this.writers[processed.channel]
     if (writer) {
       writer.handled()
