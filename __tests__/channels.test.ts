@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest'
 import { StreamMsgMock } from '../src/testUtils'
 import { WriterInstance } from '../src/writer'
-import { OrchestratorMessage } from '@rdfc/proto'
+import { FromRunner } from '@rdfc/proto'
 import winston, { createLogger } from 'winston'
 import { StreamIdentify } from '@rdfc/proto/lib/generated/common'
 
@@ -24,8 +24,8 @@ describe('Writer', async () => {
       return 1
     })
     const client = new StreamMsgMock(fn)
-    const msgs: OrchestratorMessage[] = []
-    const write = async (msg: OrchestratorMessage) => msgs.push(msg)
+    const msgs: FromRunner[] = []
+    const write = async (msg: FromRunner) => msgs.push(msg)
     const writer = new WriterInstance(uri, client as any, write, runner, logger)
 
     const send = writer.string('hello world')
@@ -49,8 +49,8 @@ describe('Writer', async () => {
       return 1
     })
     const client = new StreamMsgMock(fn)
-    const msgs: OrchestratorMessage[] = []
-    const write = async (msg: OrchestratorMessage) => msgs.push(msg)
+    const msgs: FromRunner[] = []
+    const write = async (msg: FromRunner) => msgs.push(msg)
     const writer = new WriterInstance(uri, client as any, write, runner, logger)
 
     const send = writer.buffer(encoder.encode('hello world'))
@@ -74,8 +74,8 @@ describe('Writer', async () => {
       return 1
     })
     const client = new StreamMsgMock(fn)
-    const msgs: OrchestratorMessage[] = []
-    const write = async (msg: OrchestratorMessage) => msgs.push(msg)
+    const msgs: FromRunner[] = []
+    const write = async (msg: FromRunner) => msgs.push(msg)
     const writer = new WriterInstance(uri, client as any, write, runner, logger)
 
     async function* gen() {
@@ -104,8 +104,8 @@ describe('Writer', async () => {
       return 1
     })
     const client = new StreamMsgMock(fn)
-    const msgs: OrchestratorMessage[] = []
-    const write = async (msg: OrchestratorMessage) => msgs.push(msg)
+    const msgs: FromRunner[] = []
+    const write = async (msg: FromRunner) => msgs.push(msg)
     const writer = new WriterInstance(uri, client as any, write, runner, logger)
 
     await writer.close()
@@ -121,8 +121,8 @@ describe('Writer', async () => {
     const runner = 'myRunner'
     const client = new StreamMsgMock(() => 1)
 
-    const msgs: OrchestratorMessage[] = []
-    const write = async (msg: OrchestratorMessage) => msgs.push(msg)
+    const msgs: FromRunner[] = []
+    const write = async (msg: FromRunner) => msgs.push(msg)
     const writer = new WriterInstance(uri, client as any, write, runner, logger)
 
     async function* gen() {
