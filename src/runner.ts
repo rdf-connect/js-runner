@@ -4,6 +4,9 @@ import {
   Processor,
   RunnerClient,
   ToRunner,
+  LocalAck,
+  ReceivingMessage,
+  ReceivingStreamMessage,
 } from '@rdfc/proto'
 import { Reader, ReaderInstance } from './reader'
 import { Writer, WriterInstance } from './writer'
@@ -16,11 +19,6 @@ import { Cont, empty, extractShapes, Shapes } from 'rdf-lens'
 import { NamedNode, Parser } from 'n3'
 import { createNamespace, createUriAndTermNamespace, RDF } from '@treecg/types'
 import { Quad, Term } from '@rdfjs/types'
-import {
-  LocalAck,
-  ReceivingMessage,
-  ReceivingStreamMessage,
-} from '@rdfc/proto/lib/generated/common'
 
 const RDFL = createUriAndTermNamespace(
   'https://w3id.org/rdf-lens/ontology#',
@@ -85,7 +83,7 @@ export class Runner {
       transports: [
         new RpcTransport({
           entities: [proc.uri, this.uri],
-          stream: this.client.logStream(() => {}),
+          stream: this.client.logStream(() => { }),
         }),
       ],
     })
@@ -167,11 +165,11 @@ export class Runner {
     }
 
     if (msg.streamMsg) {
-      this.handleStreamMsg(msg.streamMsg)
+      await this.handleStreamMsg(msg.streamMsg)
     }
 
     if (msg.close) {
-      this.handleClose(msg.close)
+      await this.handleClose(msg.close)
     }
 
     if (msg.pipeline) {
@@ -183,7 +181,7 @@ export class Runner {
     }
   }
 
-  private handleClose(close: Close) {
+  private async handleClose(close: Close) {
     const uri = close.channel
     const r = this.readers[uri]
 
@@ -195,7 +193,7 @@ export class Runner {
     const w = this.writers[uri]
     if (w) {
       closed = true
-      w.close(true)
+      await w.close(true)
     }
 
     if (!closed) {
@@ -238,11 +236,11 @@ export class Runner {
     }
   }
 
-  private handleStreamMsg(streamMsg: ReceivingStreamMessage) {
+  private async handleStreamMsg(streamMsg: ReceivingStreamMessage) {
     const r = this.readers[streamMsg.channel]
 
     if (r) {
-      r.handleStreamingMessage(streamMsg)
+      await r.handleStreamingMessage(streamMsg)
     } else {
       this.logger.error(
         `Received stream message for channel ${streamMsg.channel}, but no reader was present.`,
