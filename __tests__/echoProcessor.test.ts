@@ -4,13 +4,12 @@ import { createRunner, channel } from '../src/testUtils'
 import { Processor } from '../src/processor'
 import { Writer } from '../src/writer'
 import { FullProc } from '../src/runner'
-import winston, { createLogger } from 'winston'
+import { createLogger, transports } from 'winston'
 
 const encoder = new TextEncoder()
-const decoder = new TextDecoder()
 
 const logger = createLogger({
-  transports: new winston.transports.Console({
+  transports: new transports.Console({
     level: process.env['DEBUG'] || 'info',
   }),
 })
@@ -71,11 +70,11 @@ describe('EchoProcessor', () => {
 
     const msgs: string[] = []
 
-    ;(async () => {
-      for await (const m of outputReader.strings()) {
-        msgs.push(m)
-      }
-    })()
+      ; (async () => {
+        for await (const m of outputReader.strings()) {
+          msgs.push(m)
+        }
+      })()
 
     await inputWriter.string('Hello')
     expect(msgs).toEqual(['Hello'])
@@ -107,13 +106,13 @@ describe('EchoProcessor', () => {
 
     const msgs: string[] = []
 
-    ;(async () => {
-      for await (const m of outputReader.strings()) {
-        msgs.push(m)
-      }
-    })()
+      ; (async () => {
+        for await (const m of outputReader.strings()) {
+          msgs.push(m)
+        }
+      })()
 
-    const gen = async function* () {
+    const gen = async function*() {
       yield encoder.encode('Hello')
       yield encoder.encode('World')
     }

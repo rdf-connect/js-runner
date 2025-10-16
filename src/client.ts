@@ -1,18 +1,18 @@
 import * as grpc from '@grpc/grpc-js'
 import { promisify } from 'util'
 import { RunnerClient, ToRunner } from '@rdfc/proto'
-import winston from 'winston'
+import { createLogger } from 'winston'
 import { RpcTransport } from './logger'
 import { Runner } from './runner'
 
 export async function start(addr: string, uri: string) {
   const client = new RunnerClient(addr, grpc.credentials.createInsecure())
 
-  const logger = winston.createLogger({
+  const logger = createLogger({
     transports: [
       new RpcTransport({
         entities: [uri, 'cli'],
-        stream: client.logStream(() => {}),
+        stream: client.logStream(() => { }),
       }),
     ],
   })

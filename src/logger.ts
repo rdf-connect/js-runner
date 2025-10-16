@@ -1,4 +1,4 @@
-import winston, { Logger } from 'winston'
+import { createLogger, LogEntry, Logger } from 'winston'
 import Transport from 'winston-transport'
 
 import * as grpc from '@grpc/grpc-js'
@@ -21,7 +21,7 @@ export class RpcTransport extends Transport {
     this.aliases = opts.aliases || []
   }
 
-  log(info: winston.LogEntry, callback: () => void) {
+  log(info: LogEntry, callback: () => void) {
     if (!this.stream.closed) {
       this.stream.write(
         {
@@ -55,7 +55,7 @@ export function extendLogger(baseLogger: Logger, newEntity: string): Logger {
     return t
   })
 
-  return winston.createLogger({
+  return createLogger({
     level: baseLogger.level,
     format: baseLogger.format,
     defaultMeta: baseLogger.defaultMeta,

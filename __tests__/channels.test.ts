@@ -1,15 +1,14 @@
 import { describe, expect, test, vi } from 'vitest'
 import { StreamMsgMock } from '../src/testUtils'
 import { WriterInstance } from '../src/writer'
-import { FromRunner } from '@rdfc/proto'
-import winston, { createLogger } from 'winston'
-import { StreamIdentify } from '@rdfc/proto/lib/generated/common'
+import { FromRunner, StreamIdentify } from '@rdfc/proto'
+import { createLogger, transports } from 'winston'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
 const logger = createLogger({
-  transports: new winston.transports.Console({
+  transports: new transports.Console({
     level: process.env['DEBUG'] || 'info',
   }),
 })
@@ -125,10 +124,12 @@ describe('Writer', async () => {
     const write = async (msg: FromRunner) => msgs.push(msg)
     const writer = new WriterInstance(uri, client as any, write, runner, logger)
 
+    let closingPromise: Promise<void> | undefined = undefined;
     async function* gen() {
       yield encoder.encode('hello')
 
-      writer.close() // initiate close
+      // initiate close but the channel cannot close yet, as it has an open stream message
+      closingPromise = writer.close()
 
       await new Promise((res) => setTimeout(res, 20))
 
@@ -140,6 +141,7 @@ describe('Writer', async () => {
     }
 
     await writer.stream(gen())
+    await closingPromise!;
     expect(msgs.map((x) => x.close!.channel)).toEqual([uri])
 
     expect(client.data.length).toBe(2)

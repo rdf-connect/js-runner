@@ -11,9 +11,8 @@ import {
 import { Reader, ReaderInstance } from './reader'
 import { Writer, WriterInstance } from './writer'
 import { Processor as Proc } from './processor'
-import { Logger } from 'winston'
+import { createLogger, Logger } from 'winston'
 
-import winston from 'winston'
 import { RpcTransport } from './logger'
 import { Cont, empty, extractShapes, Shapes } from 'rdf-lens'
 import { NamedNode, Parser } from 'n3'
@@ -79,7 +78,7 @@ export class Runner {
   async addProcessor<P extends Proc<unknown>>(
     proc: Processor,
   ): Promise<FullProc<P>> {
-    const procLogger = winston.createLogger({
+    const procLogger = createLogger({
       transports: [
         new RpcTransport({
           entities: [proc.uri, this.uri],
@@ -198,7 +197,7 @@ export class Runner {
 
     if (!closed) {
       this.logger.error(
-        `Received a close event for channel ${uri}, but neither reader or writer is present.`,
+        `Received a close event for channel ${uri}, but neither reader nor writer is present.`,
       )
     }
   }
