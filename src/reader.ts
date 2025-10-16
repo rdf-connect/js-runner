@@ -5,7 +5,7 @@ import {
   ReceivingStreamMessage,
   RunnerClient,
 } from '@rdfc/proto'
-import winston from 'winston'
+import { Logger } from 'winston'
 import {
   AnyConvertor,
   Convertor,
@@ -104,7 +104,7 @@ class MyIter<T> implements AsyncIterable<T> {
 export class ReaderInstance implements Reader {
   private client: RunnerClient
   readonly uri: string
-  private logger: winston.Logger
+  private logger: Logger
   private readonly notifyOrchestrator: Writable
 
   private consumers: MyIter<unknown>[] = []
@@ -113,7 +113,7 @@ export class ReaderInstance implements Reader {
     uri: string,
     client: RunnerClient,
     notifyOrchestrator: Writable,
-    logger: winston.Logger,
+    logger: Logger,
   ) {
     this.uri = uri
     this.client = client
