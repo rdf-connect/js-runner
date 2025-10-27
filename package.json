@@ -31,7 +31,6 @@
   "devDependencies": {
     "@eslint/js": "^9.38.0",
     "@rdfjs/types": "^2.0.1",
-    "@grpc/grpc-js": "^1.14.0",
     "@types/jest": "^29.5.14",
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.26.1",
@@ -54,6 +53,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
     "@rdfc/proto": "^0.1.2",
     "@treecg/types": "^0.4.6",
     "jsonld": "^8.3.3",
