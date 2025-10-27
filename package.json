@@ -31,7 +31,7 @@
   "devDependencies": {
     "@eslint/js": "^9.38.0",
     "@rdfjs/types": "^2.0.1",
-    "@types/jest": "^29.5.14",
+    "@types/jest": "^30.0.0",
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.26.1",
     "@types/node": "^22.18.12",
@@ -43,7 +43,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.4.0",
     "husky": "^9.1.7",
-    "jest": "^29.7.0",
+    "jest": "^30.2.0",
     "lint-staged": "^15.5.2",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.5",
