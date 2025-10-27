@@ -47,8 +47,7 @@ type ProcessorConfig = {
   clazz?: string
 }
 
-export type FullProc<C extends Proc<unknown>> =
-  C extends Proc<infer T> ? T & C : unknown
+export type FullProc<C> = C extends Proc<infer T> ? T & C : never
 export class Runner {
   private readonly readers: { [uri: string]: ReaderInstance } = {}
   private readonly writers: { [uri: string]: WriterInstance } = {}
