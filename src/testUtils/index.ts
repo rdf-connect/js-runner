@@ -1,29 +1,22 @@
-import {
-  DataChunk,
-  FromRunner,
-  LogMessage,
-  Processor as ProcConfig,
-  ToRunner,
-} from '@rdfc/proto'
-import {} from '../reexports'
-import { extractShapes } from 'rdf-lens'
-import { NamedNode, Parser, Writer as N3Writer } from 'n3'
-import { readFile } from 'fs/promises'
-import winston, { createLogger } from 'winston'
-import { Processor } from '../processor'
-import { FullProc, Runner, Writable } from '../runner'
-import { Quad } from '@rdfjs/types'
-import { createTermNamespace } from '@treecg/types'
+import { DataChunk, FromRunner, LogMessage, Processor as ProcConfig, ToRunner } from "@rdfc/proto";
+import { extractShapes } from "rdf-lens";
+import { NamedNode, Parser, Writer as N3Writer } from "n3";
+import { readFile } from "fs/promises";
+import winston, { createLogger } from "winston";
+import { Processor } from "../processor";
+import { FullProc, Runner, Writable } from "../runner";
+import { Quad } from "@rdfjs/types";
+import { createTermNamespace } from "@treecg/types";
 import {
   ReceivingStreamControl,
   SendingStreamControl,
   StreamChunk,
   StreamIdentify,
-} from '@rdfc/proto/lib/generated/common'
-import { MockClientDuplexStream } from './duplex'
-import { promisify } from 'util'
-import { Reader } from '../reader'
-import { Writer } from '../writer'
+} from "@rdfc/proto/lib/generated/common";
+import { MockClientDuplexStream } from "./duplex";
+import { promisify } from "util";
+import { Reader } from "../reader";
+import { Writer } from "../writer";
 
 export function channel(runner: Runner, name: string): [Writer, Reader] {
   const n = new NamedNode(name)
@@ -359,12 +352,13 @@ export class ProcHelper<T extends Processor<unknown>> {
       pipeline: new N3Writer().quadsToString(this.quads),
     })
 
-    const proc = await this.runner.addProcessor<T>({
-      config: JSON.stringify(this.config),
-      arguments: '',
-      uri,
-    })
-    return proc
+    return await this.runner.createProcessor<T>(
+      {
+        config: JSON.stringify(this.config),
+        arguments: '',
+        uri,
+      },
+    )
   }
 }
 

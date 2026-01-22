@@ -74,7 +74,7 @@ export class Runner {
     this.logger = logger
   }
 
-  async addProcessor<P extends Proc<unknown>>(
+  async createProcessor<P extends Proc<unknown>>(
     proc: Processor,
   ): Promise<FullProc<P>> {
     const procLogger = createLogger({
@@ -93,7 +93,7 @@ export class Runner {
       )
       .map((x) => x.object.value)
 
-    this.logger.info('parsing ' + proc.uri + ' type ' + ty)
+    this.logger.info(`Parsing processor '${proc.uri}' of type(s) [${ty.join(', ')}]`)
     const args = this.shapes.lenses[RDFL.TypedExtract].execute({
       id: new NamedNode(proc.uri),
       quads: this.quads,
@@ -103,9 +103,18 @@ export class Runner {
     const jsProgram = await import(config.file)
     const clazz = jsProgram[config.clazz || 'default']
     const instance: Proc<unknown> = new clazz(args, procLogger)
+
+    return <FullProc<P>>instance
+  }
+
+  async addProcessor<P extends Proc<unknown>>(
+    proc: Processor,
+  ): Promise<FullProc<P>> {
+    const instance = await this.createProcessor<P>(proc)
+
     await instance.init()
 
-    this.logger.info('inited ' + proc.uri + ' type ' + ty)
+    this.logger.info(`Initiated processor '${proc.uri}'`)
 
     this.processors.push(instance)
     this.processorTransforms.push(instance.transform())
