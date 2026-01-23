@@ -1,7 +1,7 @@
 import { Duplex } from 'stream'
 import type {
   ClientDuplexStream,
-  InterceptingCallInterface,
+  InterceptingCall,
 } from '@grpc/grpc-js'
 import { AuthContext } from '@grpc/grpc-js/build/src/auth-context'
 
@@ -23,7 +23,7 @@ export class MockClientDuplexStream<Req, Res>
 
   public readonly id: number
 
-  call?: InterceptingCallInterface | undefined
+  call?: InterceptingCall | undefined
   constructor() {
     super({ objectMode: true })
     this.id = count++
