@@ -34,7 +34,7 @@
     "@types/jest": "^30.0.0",
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.26.1",
-    "@types/node": "^24.10.13",
+    "@types/node": "^24.10.14",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "@vitest/coverage-v8": "^4.0.18",
