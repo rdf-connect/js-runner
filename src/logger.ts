@@ -20,32 +20,30 @@ export class RpcTransport extends Transport {
     this.stream = opts.stream
     this.entities = opts.entities
     this.aliases = opts.aliases || []
-    this.draining = true;
+    this.draining = true
 
     this.stream.on('drain', () => {
-      this.draining = true;
-    });
+      this.draining = true
+    })
   }
 
   log(info: LogEntry, callback: () => void) {
     if (!this.stream.closed && !this.stream.destroyed && this.stream.writable) {
       if (this.draining) {
-        const ok = this.stream.write(
-          {
-            msg: info.message,
-            level: info.level,
-            entities: this.entities,
-            aliases: this.aliases,
-          }
-        );
+        const ok = this.stream.write({
+          msg: info.message,
+          level: info.level,
+          entities: this.entities,
+          aliases: this.aliases,
+        })
         if (!ok) {
-          this.draining = false;
+          this.draining = false
         }
       }
     } else {
       console.log('Output stream closed')
     }
-    callback();
+    callback()
   }
 
   withEntity(entity: string): RpcTransport {
