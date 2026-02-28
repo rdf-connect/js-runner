@@ -1,4 +1,7 @@
 # JavaScript runner for RDF-Connect
+[![Build and tests with Node.js](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml/badge.svg)](https://github.com/rdf-connect/js-runner/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/@rdfc/js-runner.svg?style=popout)](https://npmjs.com/package/@rdfc/js-runner)
+
+This package provides a JavaScript runner implementation for RDF-Connect, which allows you to run JavaScript/TypeScript processors in your [RDF-Connect](https://github.com/rdf-connect/rdf-connect) pipeline.
 
 ## Usage
 
