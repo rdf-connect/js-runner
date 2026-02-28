@@ -1,8 +1,5 @@
 import { Duplex } from 'stream'
-import type {
-  ClientDuplexStream,
-  InterceptingCall,
-} from '@grpc/grpc-js'
+import type { ClientDuplexStream, InterceptingCall } from '@grpc/grpc-js'
 import { AuthContext } from '@grpc/grpc-js/build/src/auth-context'
 
 type Matcher<Req, T> = (req: Req) => T | undefined

@@ -93,7 +93,9 @@ export class Runner {
       )
       .map((x) => x.object.value)
 
-    this.logger.info(`Parsing processor '${proc.uri}' of type(s) [${ty.join(', ')}]`)
+    this.logger.info(
+      `Parsing processor '${proc.uri}' of type(s) [${ty.join(', ')}]`,
+    )
     const args = this.shapes.lenses[RDFL.TypedExtract].execute({
       id: new NamedNode(proc.uri),
       quads: this.quads,

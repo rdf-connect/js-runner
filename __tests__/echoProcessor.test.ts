@@ -70,12 +70,11 @@ describe('EchoProcessor', () => {
 
     const msgs: string[] = []
 
-      ; (async () => {
-        for await (const m of outputReader.strings()) {
-          msgs.push(m)
-        }
-      })()
-
+    ;(async () => {
+      for await (const m of outputReader.strings()) {
+        msgs.push(m)
+      }
+    })()
 
     await inputWriter.string('Hello')
     expect(msgs).toEqual(['Hello'])
@@ -107,13 +106,13 @@ describe('EchoProcessor', () => {
 
     const msgs: string[] = []
 
-      ; (async () => {
-        for await (const m of outputReader.strings()) {
-          msgs.push(m)
-        }
-      })()
+    ;(async () => {
+      for await (const m of outputReader.strings()) {
+        msgs.push(m)
+      }
+    })()
 
-    const gen = async function*() {
+    const gen = async function* () {
       yield encoder.encode('Hello')
       yield encoder.encode('World')
     }
