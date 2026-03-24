@@ -33,6 +33,7 @@ export interface Reader {
   streams(): AsyncIterable<AsyncGenerator<Uint8Array>>
   buffers(): AsyncIterable<Uint8Array>
   anys(): AsyncIterable<Any>
+  cancel(): Promise<void>
 }
 
 type Todo<T> = {
@@ -44,12 +45,18 @@ class MyIter<T> implements AsyncIterable<T> {
   private convertor: Convertor<T>
   private queue: Todo<T | undefined>[] = []
   private resolveNext: ((value: undefined) => void) | null = null
+  private closed = false
 
   constructor(convertor: Convertor<T>) {
     this.convertor = convertor
   }
 
   push(buffer: Uint8Array, onComplete: () => void) {
+    if (this.closed) {
+      onComplete()
+      return
+    }
+
     const item = this.convertor.from(buffer)
     this.queue.push({ item, onComplete })
     if (this.resolveNext) {
@@ -59,6 +66,12 @@ class MyIter<T> implements AsyncIterable<T> {
   }
 
   close(onComplete: () => void) {
+    if (this.closed) {
+      onComplete()
+      return
+    }
+
+    this.closed = true
     this.queue.push({ item: undefined, onComplete })
     if (this.resolveNext) {
       this.resolveNext(undefined)
@@ -67,6 +80,11 @@ class MyIter<T> implements AsyncIterable<T> {
   }
 
   async pushStream(chunks: AsyncIterable<DataChunk>, onComplete: () => void) {
+    if (this.closed) {
+      onComplete()
+      return
+    }
+
     // This is an async generator that transforms DataChunks to Buffers
     const stream = (async function* (stream) {
       for await (const chunk of stream) {
@@ -108,6 +126,8 @@ export class ReaderInstance implements Reader {
   private readonly notifyOrchestrator: Writable
 
   private consumers: MyIter<unknown>[] = []
+  private closed = false
+  private canceled = false
 
   constructor(
     uri: string,
@@ -148,6 +168,16 @@ export class ReaderInstance implements Reader {
   handleMsg(msg: ReceivingMessage) {
     this.logger.debug(`${this.uri} handling message`)
 
+    if (this.closed) {
+      this.notifyOrchestrator({
+        processed: {
+          globalSequenceNumber: msg.globalSequenceNumber,
+          channel: this.uri,
+        },
+      })
+      return
+    }
+
     const promises = []
     for (const iter of this.consumers) {
       promises.push(new Promise((res) => iter.push(msg.data, () => res(null))))
@@ -164,9 +194,26 @@ export class ReaderInstance implements Reader {
   }
 
   close() {
+    if (this.closed) {
+      return
+    }
+
+    this.closed = true
     for (const iter of this.consumers) {
       iter.close(() => {})
     }
+  }
+
+  async cancel(): Promise<void> {
+    if (this.canceled) {
+      return
+    }
+
+    this.canceled = true
+    this.close()
+    await this.notifyOrchestrator({
+      close: { channel: this.uri },
+    })
   }
 
   // There is a stream message available for this reader
@@ -175,6 +222,13 @@ export class ReaderInstance implements Reader {
     globalSequenceNumber,
   }: ReceivingStreamMessage) {
     this.logger.debug(`${this.uri} handling streaming message`)
+
+    if (this.closed) {
+      await this.notifyOrchestrator({
+        processed: { globalSequenceNumber, channel },
+      })
+      return
+    }
 
     const chunks = this.client.receiveStreamMessage()
     const writeControlMessage = promisify(chunks.write.bind(chunks))
