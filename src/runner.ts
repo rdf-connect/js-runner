@@ -8,16 +8,18 @@ import {
   ReceivingMessage,
   ReceivingStreamMessage,
 } from '@rdfc/proto'
+import { pathToFileURL } from 'node:url'
 import { Reader, ReaderInstance } from './reader'
 import { Writer, WriterInstance } from './writer'
 import { Processor as Proc } from './processor'
-import { createLogger, Logger } from 'winston'
+import { Logger } from 'winston'
 
-import { RpcTransport } from './logger'
+import { extendLogger } from './logger'
 import { Cont, empty, extractShapes, Shapes } from 'rdf-lens'
 import { NamedNode, Parser } from 'n3'
 import { createNamespace, createUriAndTermNamespace, RDF } from '@treecg/types'
 import { Quad, Term } from '@rdfjs/types'
+import { State } from './state'
 
 const RDFL = createUriAndTermNamespace(
   'https://w3id.org/rdf-lens/ontology#',
@@ -61,30 +63,64 @@ export class Runner {
 
   private readonly processors: Proc<unknown>[] = []
   private readonly processorTransforms: Promise<unknown>[] = []
+  private readonly configPath?: string
+  private readonly state?: State
+  private readonly runnerId?: string
 
   constructor(
     client: RunnerClient,
     notifyOrchestrator: Writable,
     uri: string,
     logger: Logger,
+    configPath?: string,
+    state?: State,
+    runnerId?: string,
   ) {
     this.client = client
     this.notifyOrchestrator = notifyOrchestrator
     this.uri = uri
     this.logger = logger
+    this.configPath = configPath
+    this.state = state
+    this.runnerId = runnerId
+  }
+
+  makeRelative(target: string, base: string): string {
+    if (!this.configPath) return target
+
+    const targetUrl = new URL(target)
+    const baseUrl = new URL(base)
+
+    const targetParts = targetUrl.pathname.split('/')
+    const baseParts = baseUrl.pathname.split('/')
+
+    // Remove filename from base (treat as directory)
+    baseParts.pop()
+
+    // Find common path
+    let i = 0
+    while (
+      i < targetParts.length &&
+      i < baseParts.length &&
+      targetParts[i] === baseParts[i]
+    ) {
+      i++
+    }
+
+    const up = baseParts.slice(i).map(() => '..')
+    const down = targetParts.slice(i)
+
+    const thing = './' + [...up, ...down].join('/')
+    const configPath = this.configPath && pathToFileURL(this.configPath)
+    console.log({ configPath, thing, base, target })
+    const final = new URL(thing, configPath)
+    return final.href
   }
 
   async createProcessor<P extends Proc<unknown>>(
     proc: Processor,
   ): Promise<FullProc<P>> {
-    const procLogger = createLogger({
-      transports: [
-        new RpcTransport({
-          entities: [proc.uri, this.uri],
-          stream: this.client.logStream(() => {}),
-        }),
-      ],
-    })
+    const procLogger = extendLogger(this.logger, proc.uri)
 
     const ty = this.quads
       .filter(
@@ -102,7 +138,7 @@ export class Runner {
     })
 
     const config: ProcessorConfig = JSON.parse(proc.config)
-    const jsProgram = await import(config.file)
+    const jsProgram = await import(this.makeRelative(config.file, this.uri))
     const clazz = jsProgram[config.clazz || 'default']
     const instance: Proc<unknown> = new clazz(args, procLogger)
 
@@ -112,6 +148,7 @@ export class Runner {
   async addProcessor<P extends Proc<unknown>>(
     proc: Processor,
   ): Promise<FullProc<P>> {
+    this.logger.info(JSON.stringify(proc))
     const instance = await this.createProcessor<P>(proc)
 
     await instance.init()
@@ -141,12 +178,17 @@ export class Runner {
     if (this.writers[id] !== undefined) {
       return this.writers[id]
     }
+    const tracker =
+      this.runnerId !== undefined
+        ? this.state?.trackChannel(this.runnerId, id, 'writer')
+        : undefined
     const writer = new WriterInstance(
       id,
       this.client,
       this.notifyOrchestrator,
       this.uri,
       this.logger,
+      tracker,
     )
     this.writers[id] = writer
     return writer
@@ -158,11 +200,16 @@ export class Runner {
     if (this.readers[ids] !== undefined) {
       return this.readers[ids]
     }
+    const tracker =
+      this.runnerId !== undefined
+        ? this.state?.trackChannel(this.runnerId, ids, 'reader')
+        : undefined
     const reader = new ReaderInstance(
       ids,
       this.client,
       this.notifyOrchestrator,
       this.logger,
+      tracker,
     )
     this.readers[ids] = reader
     return reader

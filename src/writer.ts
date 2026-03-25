@@ -2,6 +2,7 @@ import { FromRunner, RunnerClient } from '@rdfc/proto'
 import { promisify } from 'util'
 import { Logger } from 'winston'
 import { Any } from './reader'
+import { ChannelTracker } from './state'
 
 type Writable = (msg: FromRunner) => Promise<unknown>
 export interface Writer {
@@ -26,12 +27,19 @@ export class WriterInstance implements Writer {
   private readonly notifyOrchestrator: Writable
   private readonly logger: Logger
 
-  private awaitingProcessed: Array<() => void> = []
+  private awaitingProcessed: Array<{
+    resolve: () => void
+    startMs: number
+    bytes: number
+  }> = []
 
   private openStreams: number = 0
   private shouldClose: Array<() => void> = []
+  private hasClosed = false
+  private remoteCloseReceived = false
 
   private readonly runnerId: string
+  private readonly tracker: ChannelTracker | undefined
 
   constructor(
     uri: string,
@@ -39,16 +47,21 @@ export class WriterInstance implements Writer {
     notifyOrchestrator: Writable,
     runnerId: string,
     logger: Logger,
+    tracker?: ChannelTracker,
   ) {
     this.client = client
     this.notifyOrchestrator = notifyOrchestrator
     this.uri = uri
     this.logger = logger
     this.runnerId = runnerId
+    this.tracker = tracker
   }
 
-  private awaitProcessed(): Promise<void> {
-    return new Promise((res) => this.awaitingProcessed.push(res))
+  private awaitProcessed(bytes: number): Promise<void> {
+    const startMs = Date.now()
+    return new Promise<void>((resolve) => {
+      this.awaitingProcessed.push({ resolve, startMs, bytes })
+    })
   }
 
   async any(any: Any): Promise<void> {
@@ -66,7 +79,7 @@ export class WriterInstance implements Writer {
   async buffer(buffer: Uint8Array): Promise<void> {
     this.logger.debug(`${this.uri} sends buffer ${buffer.length} bytes`)
     const localSequenceNumber = this.localSequenceNumber++
-    const handledPromise = this.awaitProcessed()
+    const handledPromise = this.awaitProcessed(buffer.length)
 
     await this.notifyOrchestrator({
       msg: { data: buffer, channel: this.uri, localSequenceNumber },
@@ -82,7 +95,7 @@ export class WriterInstance implements Writer {
     const t = transform || ((x: unknown) => <Uint8Array>x)
     const stream = this.client.sendStreamMessage()
 
-    const handledPromise = this.awaitProcessed()
+    const handledPromise = this.awaitProcessed(0) // bytes unknown for streams
     const writeStreamMessageChunk = promisify(stream.write.bind(stream))
     const localSequenceNumber = this.localSequenceNumber++
     await writeStreamMessageChunk({
@@ -118,11 +131,12 @@ export class WriterInstance implements Writer {
   async string(msg: string): Promise<void> {
     this.logger.debug(`${this.uri} sends string ${msg.length} characters`)
     const localSequenceNumber = this.localSequenceNumber++
-    const handledPromise = this.awaitProcessed()
+    const encoded = encoder.encode(msg)
+    const handledPromise = this.awaitProcessed(encoded.length)
 
     await this.notifyOrchestrator({
       msg: {
-        data: encoder.encode(msg),
+        data: encoded,
         channel: this.uri,
         localSequenceNumber,
       },
@@ -138,20 +152,27 @@ export class WriterInstance implements Writer {
    * - If there are still active streams, closing is deferred until they complete.
    * - If multiple callers invoke `close()` while waiting, their Promises are queued and
    *   resolved once the channel actually closes.
-   * - If this side initiated the close (`issued = false`), a close message is sent to the remote.
+   * - A close message is sent to the remote only if the close was locally initiated and
+   *   the remote has not already sent a close.
    *
    * @param issued - If true, indicates the close request originated remotely
    */
   async close(issued = false): Promise<void> {
-    // Case 1: Active streams still running → wait until they finish
+    if (issued) this.remoteCloseReceived = true
+
+    // Case 1: Active streams still running → defer until they finish
     if (this.openStreams !== 0) {
       await new Promise<void>((resolve) => this.shouldClose.push(resolve))
       return
     }
 
-    // Case 2: No active streams → perform actual close
+    // Case 2: Already closed — nothing to do
+    if (this.hasClosed) return
+    this.hasClosed = true
+
+    // Case 3: No active streams → perform actual close
     this.logger.debug(`${this.uri} closes stream`)
-    if (!issued) {
+    if (!this.remoteCloseReceived) {
       await this.notifyOrchestrator({
         close: { channel: this.uri },
       })
@@ -169,7 +190,10 @@ export class WriterInstance implements Writer {
    */
   handled(): void {
     if (this.awaitingProcessed.length > 0) {
-      this.awaitingProcessed.shift()!()
+      const { resolve, startMs, bytes } = this.awaitingProcessed.shift()!
+      const latencyMs = Date.now() - startMs
+      this.tracker?.recordMessage(bytes, latencyMs)
+      resolve()
     } else {
       this.logger.error(
         'Expected to be waiting for a message to be processed, but this is not the case ' +

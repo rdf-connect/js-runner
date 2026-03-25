@@ -7,7 +7,7 @@
 @prefix sh: <http://www.w3.org/ns/shacl#>.
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
 
-<> owl:imports <../../index.ttl>.
+# <> owl:imports <../../index.ttl>.
 rdfc:Test rdfc:jsImplementationOf rdfc:Processor;
   rdfc:entrypoint <./>;
   rdfc:file <./lib/processors.js>;
