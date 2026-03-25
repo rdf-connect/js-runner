@@ -38,9 +38,9 @@
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.26.1",
     "@types/node": "^25.5.0",
-    "@typescript-eslint/eslint-plugin": "^8.57.1",
-    "@typescript-eslint/parser": "^8.57.1",
-    "@vitest/coverage-v8": "^4.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
+    "@vitest/coverage-v8": "^4.1.1",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
@@ -50,8 +50,8 @@
     "prettier": "^3.8.1",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.1",
-    "vitest": "^4.1.0"
+    "typescript-eslint": "^8.57.2",
+    "vitest": "^4.1.1"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
