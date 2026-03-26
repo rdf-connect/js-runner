@@ -202,11 +202,10 @@ export class WriterInstance implements Writer {
       )
 
       for await (const msg of buffer) {
-        this.assertCanWrite()
         const processedPromise = new Promise((res) => stream.once('data', res))
         await writeStreamMessageChunk({ data: { data: t(msg) } })
         // Await a message on the stream, indicating that the chunk has been processed
-        await this.raceWithCancellation(processedPromise)
+        await processedPromise
       }
 
       stream.end()
