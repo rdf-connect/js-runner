@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { StreamMsgMock, channel, createRunner } from '../src/testUtils'
+import { channel, createRunner, StreamMsgMock } from '../src/testUtils'
 import { WriterInstance } from '../src/writer'
 import { FromRunner, StreamIdentify } from '@rdfc/proto'
 import { createLogger, transports } from 'winston'
@@ -171,7 +171,7 @@ describe('Writer', async () => {
     writer.on('cancel', onCancel)
     await reader.cancel()
 
-    expect(onCancel).toBeCalledTimes(1)
+    expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
   test('does not emit a cancel event on a local close', async () => {
@@ -185,7 +185,7 @@ describe('Writer', async () => {
     writer.on('cancel', onCancel)
     await writer.close()
 
-    expect(onCancel).not.toBeCalled()
+    expect(onCancel).not.toHaveBeenCalled()
   })
 
   test('throws when writing to a canceled writer', async () => {
@@ -210,9 +210,13 @@ describe('Writer', async () => {
     // Register a reader consumer without draining it so the writer waits for processed.
     reader.strings()
 
-    const pendingWrite = writer.string('hello')
-    await reader.cancel()
+    // Set reader to canceled, without informing the writer of it, mimicking race condition where reader cancels while writer is writing, but before the writer receives the cancel message.
+    // @ts-ignore
+    reader['canceled'] = true
+    // @ts-ignore
+    reader['closed'] = true
 
+    const pendingWrite = writer.string('hello')
     await expect(pendingWrite).rejects.toThrow(/canceled/i)
   })
 })

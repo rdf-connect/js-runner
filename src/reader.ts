@@ -173,6 +173,8 @@ export class ReaderInstance implements Reader {
         processed: {
           globalSequenceNumber: msg.globalSequenceNumber,
           channel: this.uri,
+          error:
+            'reader is canceled; message has not been processed by the processor',
         },
       })
       return

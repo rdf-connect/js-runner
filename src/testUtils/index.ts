@@ -83,9 +83,13 @@ export class OrchestratorMock {
     // Always bounce processed msgs back to the runner
     connectStream.register(
       (msg) => msg.processed,
-      ({ channel, globalSequenceNumber }, send) => {
+      ({ channel, globalSequenceNumber, error }, send) => {
         send({
-          processed: { channel, localSequenceNumber: globalSequenceNumber },
+          processed: {
+            channel,
+            localSequenceNumber: globalSequenceNumber,
+            error,
+          },
         })
       },
     )
