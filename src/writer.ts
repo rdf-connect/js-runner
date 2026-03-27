@@ -157,13 +157,6 @@ export class WriterInstance implements Writer {
     }
   }
 
-  private rejectPendingProcessed(error: Error) {
-    // Reject all queued message waits so callers do not hang during cancellation.
-    while (this.awaitingProcessed.length > 0) {
-      this.awaitingProcessed.shift()!.reject(error)
-    }
-  }
-
   async buffer(buffer: Uint8Array): Promise<void> {
     this.assertCanWrite()
     this.logger.debug(`${this.uri} sends buffer ${buffer.length} bytes`)
@@ -248,31 +241,14 @@ export class WriterInstance implements Writer {
   }
 
   async close(issued = false): Promise<void> {
-    if (issued) {
-      if (!this.closed) {
-        // Remote initiated close: mark writer canceled to fail future writes.
-        this._canceled = true
+    this.closed = true
+    if (issued && !this._canceled) {
+      // Remote initiated close: mark writer canceled to fail future writes.
+      this._canceled = true
 
-        // Notify processors so they can stop producing upstream work as well.
-        await this.emitCancel()
-      }
-      this.closed = true
-
-      this.rejectPendingProcessed(this.cancellationError())
-
-      // Unblock any local close() callers waiting for streams to settle.
-      let waiting = this.shouldClose.pop()
-      while (waiting) {
-        waiting()
-        waiting = this.shouldClose.pop()
-      }
-      return
+      // Notify processors so they can stop producing upstream work as well.
+      await this.emitCancel()
     }
-
-    if (this.closed) {
-      return
-    }
-
     // Case 1: Active streams still running → wait until they finish
     if (this.openStreams !== 0) {
       await new Promise<void>((resolve) => this.shouldClose.push(resolve))
@@ -281,10 +257,11 @@ export class WriterInstance implements Writer {
 
     // Case 2: No active streams → perform actual close
     this.logger.debug(`${this.uri} closes stream`)
-    this.closed = true
-    await this.notifyOrchestrator({
-      close: { channel: this.uri },
-    })
+    if (!issued) {
+      await this.notifyOrchestrator({
+        close: { channel: this.uri },
+      })
+    }
 
     let resolve = this.shouldClose.pop()
     while (resolve) {
