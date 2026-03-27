@@ -260,7 +260,7 @@ export class Runner {
   private handleProcessed(processed: LocalAck) {
     const writer = this.writers[processed.channel]
     if (writer) {
-      writer.handled()
+      writer.handled(processed.error)
     } else {
       this.logger.error(
         `Received processed message for channel ${processed.channel}, but no writer was present.`,

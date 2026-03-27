@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { StreamMsgMock } from '../src/testUtils'
+import { channel, createRunner, StreamMsgMock } from '../src/testUtils'
 import { WriterInstance } from '../src/writer'
 import { FromRunner, StreamIdentify } from '@rdfc/proto'
 import { createLogger, transports } from 'winston'
@@ -109,6 +109,8 @@ describe('Writer', async () => {
 
     await writer.close()
 
+    expect(writer.canceled).toBe(false)
+
     expect(msgs.length).toBe(1)
     expect(msgs.map((x) => x.close!.channel)).toEqual([uri])
 
@@ -149,5 +151,72 @@ describe('Writer', async () => {
       'hello',
       'world',
     ])
+  })
+
+  test('is marked canceled when connected reader cancels', async () => {
+    const runner = createRunner()
+    const [writer, reader] = channel(runner, 'cancel-channel')
+
+    await reader.cancel()
+
+    expect(writer.canceled).toBe(true)
+    await expect(writer.string('hello')).rejects.toThrow(/canceled/i)
+  })
+
+  test('emits a cancel event when connected reader cancels', async () => {
+    const runner = createRunner()
+    const [writer, reader] = channel(runner, 'cancel-listener-channel')
+    const onCancel = vi.fn()
+
+    writer.on('cancel', onCancel)
+    await reader.cancel()
+
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  test('does not emit a cancel event on a local close', async () => {
+    const uri = 'someUri'
+    const runner = 'myRunner'
+    const client = new StreamMsgMock(() => 1)
+    const write = async (_msg: FromRunner) => undefined
+    const writer = new WriterInstance(uri, client as any, write, runner, logger)
+    const onCancel = vi.fn()
+
+    writer.on('cancel', onCancel)
+    await writer.close()
+
+    expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  test('throws when writing to a canceled writer', async () => {
+    const uri = 'someUri'
+    const runner = 'myRunner'
+    const client = new StreamMsgMock(() => 1)
+    const write = async (_msg: FromRunner) => undefined
+    const writer = new WriterInstance(uri, client as any, write, runner, logger)
+
+    await writer.close(true)
+
+    expect(writer.canceled).toBe(true)
+    await expect(writer.buffer(encoder.encode('x'))).rejects.toThrow(
+      /canceled/i,
+    )
+  })
+
+  test('rejects in-flight writes when reader cancels', async () => {
+    const runner = createRunner()
+    const [writer, reader] = channel(runner, 'cancel-in-flight')
+
+    // Register a reader consumer without draining it so the writer waits for processed.
+    reader.strings()
+
+    // Set reader to canceled, without informing the writer of it, mimicking race condition where reader cancels while writer is writing, but before the writer receives the cancel message.
+    // @ts-ignore
+    reader['canceled'] = true
+    // @ts-ignore
+    reader['closed'] = true
+
+    const pendingWrite = writer.string('hello')
+    await expect(pendingWrite).rejects.toThrow(/canceled/i)
   })
 })
