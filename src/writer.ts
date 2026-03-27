@@ -326,19 +326,6 @@ export class WriterInstance implements Writer {
         }
       }),
     )
-    for (const handler of this.cancelHandlers) {
-      try {
-        Promise.resolve(handler()).catch((error: unknown) => {
-          this.logger.error(
-            `Cancel listener for channel ${this.uri} failed: ${String(error)}`,
-          )
-        })
-      } catch (error: unknown) {
-        this.logger.error(
-          `Cancel listener for channel ${this.uri} failed: ${String(error)}`,
-        )
-      }
-    }
   }
 
   private awaitProcessed(): Promise<void> {
