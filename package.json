@@ -38,8 +38,8 @@
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.26.1",
     "@types/node": "^25.6.0",
-    "@typescript-eslint/eslint-plugin": "^8.58.2",
-    "@typescript-eslint/parser": "^8.58.2",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
     "@vitest/coverage-v8": "^4.1.4",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
@@ -50,7 +50,7 @@
     "prettier": "^3.8.3",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.58.2",
+    "typescript-eslint": "^8.59.0",
     "vitest": "^4.1.4"
   },
   "dependencies": {
