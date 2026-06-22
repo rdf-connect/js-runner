@@ -26,7 +26,6 @@
 <1> a rdfc:Writer, rdfc:Reader.
 
 <2> a rdfc:Writer, rdfc:Reader.
-#
 <sender> a rdfc:SendProcessor;
   rdfc:writer <1>;
   rdfc:msg "hallo", "world".

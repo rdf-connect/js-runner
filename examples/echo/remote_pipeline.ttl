@@ -1,0 +1,18 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix runner: <http://localhost:3000/>.
+
+<> owl:imports runner:, runner:processors.ttl.
+<> a rdfc:Pipeline;
+  rdfc:consistsOf [
+    rdfc:processor <logProc>, <sendProc>;
+    rdfc:instantiates runner:runner;
+  ].
+
+<sendProc> a rdfc:SendProcessor;
+  rdfc:msg " Hello", " World";
+  rdfc:writer <data>.
+
+<logProc> a rdfc:LogProcessor;
+  rdfc:reader <data>.
+
