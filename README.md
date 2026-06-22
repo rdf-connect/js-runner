@@ -32,6 +32,43 @@ You can install the js-runner package using the following command:
 npm install @rdfc/js-runner
 ```
 
+
+### Remote runner usage
+
+The js-runner can also be used as a remote runner. To do this, start the runner in server mode `npx js-runner serve --config ./server.ttl`.
+This starts the remove server as configured in `server.ttl`
+
+```turtle
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+<> a rdfc:JsRunnerServer;
+  rdfc:port 3000;
+  # one or more processor definition files to host
+  rdfc:processorConfig <./processors.ttl>.
+```
+
+This enables the user to configure the pipeline just like a normal pipeline. The runner definition is automatically available at `localhost:{PORT}`.
+
+
+```turtle
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+# the endpoint serving the example configuration 
+@prefix runner: <http://localhost:3000/>.
+
+# import the runner and the processor definitions
+<> owl:imports runner:, runner:processors.ttl.
+
+# setup the pipeline
+<> a rdfc:Pipeline;
+  rdfc:consistsOf [
+    rdfc:processor <logProc>, <sendProc>;
+    rdfc:instantiates runner:runner;
+  ].
+```
+
+
 ## Logging
 
 The JavaScript runner and processors use the `winston` logging library for logging.
