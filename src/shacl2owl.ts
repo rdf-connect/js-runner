@@ -58,7 +58,7 @@ function mergeTurtle(...turtles: string[]): Promise<string> {
  * to the file it declares via `owl:imports` inside `outDir`.
  *
  * Each matched file is POSTed to the reasoning endpoint
- * (`INFER_OWL_URL`, default `https://owl.ajuvercr.be/reason`). The output path is
+ * (`SERVER_URL`, default `https://shacl2owl.knows.idlab.ugent.be/reason`). The output path is
  * the file's `owl:imports` target that, once expanded, is contained in `outDir`.
  * When no such `owl:imports` target exists, the output falls back to
  * `${outDir}/${filename}`, reusing the input file's name.
@@ -71,7 +71,8 @@ export async function shacl2owl(
   pattern: string,
   outDir: string,
 ): Promise<void> {
-  const endpoint = process.env.INFER_OWL_URL ?? 'https://owl.ajuvercr.be/reason'
+  const endpoint =
+    process.env.SERVER_URL ?? 'https://shacl2owl.knows.idlab.ugent.be/reason'
   const outDirPath = resolve(outDir)
 
   // Absolute output paths already written during this run.
