@@ -49,7 +49,7 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.9.3",
     "tsc-alias": "^1.8.17",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",
     "vitest": "^4.1.9"
   },
