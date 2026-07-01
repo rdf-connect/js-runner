@@ -11,7 +11,8 @@
     "prepare": "husky"
   },
   "bin": {
-    "js-runner": "./bin/runner.js"
+    "js-runner": "./bin/runner.js",
+    "rdfc-shacl2owl": "./bin/shacl2owl.js"
   },
   "husky": {
     "hooks": {
