@@ -1,9 +1,9 @@
-import { readFile, writeFile, mkdir, glob } from 'node:fs/promises'
-import { dirname, resolve, relative, isAbsolute, basename } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { Parser, Writer, Store } from 'n3'
-import type { Quad } from '@rdfjs/types'
-import { createNamespace } from '@treecg/types'
+import { glob, mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { Parser, Store, Writer } from "n3";
+import type { Quad } from "@rdfjs/types";
+import { createNamespace } from "@treecg/types";
 
 const OWL = createNamespace(
   'http://www.w3.org/2002/07/owl#',
@@ -25,12 +25,15 @@ function isInside(child: string, parent: string): boolean {
 }
 
 // Parse Turtle into quads while collecting its prefix declarations.
-function parseTurtle(turtle: string): {
+function parseTurtle(turtle: string, baseIRI: string): {
   quads: Quad[]
   prefixes: Record<string, string>
 } {
+  if (!baseIRI.startsWith("file:")) {
+    baseIRI = pathToFileURL(baseIRI).href;
+  }
   const prefixes: Record<string, string> = {}
-  const quads = new Parser().parse(turtle, null, (prefix, iri) => {
+  const quads = new Parser({ baseIRI }).parse(turtle, null, (prefix, iri) => {
     prefixes[prefix] = typeof iri === 'string' ? iri : iri.value
   }) as Quad[]
   return { quads, prefixes }
@@ -38,11 +41,11 @@ function parseTurtle(turtle: string): {
 
 // Merge several Turtle documents into a single serialized document,
 // preserving prefixes and de-duplicating triples.
-function mergeTurtle(...turtles: string[]): Promise<string> {
+function mergeTurtle(baseIRI: string, ...turtles: string[]): Promise<string> {
   const store = new Store()
   const prefixes: Record<string, string> = {}
   for (const turtle of turtles) {
-    const parsed = parseTurtle(turtle)
+    const parsed = parseTurtle(turtle, baseIRI);
     store.addQuads(parsed.quads)
     Object.assign(prefixes, parsed.prefixes)
   }
@@ -85,7 +88,7 @@ export async function shacl2owl(
     // Determine the output file: the owl:imports target that expands to a
     // path contained in the output directory. When absent, fall back to the
     // input file name inside outDir.
-    const { quads } = parseTurtle(turtle)
+    const { quads } = parseTurtle(turtle, input);
     const baseDir = dirname(input)
     const importQuad = quads.find(
       (q) =>
@@ -116,7 +119,7 @@ export async function shacl2owl(
       // Already written this run: pretty-append by merging the existing graph
       // with the new quads and re-serializing.
       const existing = await readFile(outputPath, 'utf8')
-      const merged = await mergeTurtle(existing, reasoned)
+      const merged = await mergeTurtle(outputPath, existing, reasoned);
       await writeFile(outputPath, merged, 'utf8')
       console.log(`Appended reasoned ${outputPath} (${merged.length} bytes)`)
     } else {
