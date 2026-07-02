@@ -11,7 +11,8 @@
     "prepare": "husky"
   },
   "bin": {
-    "js-runner": "./bin/runner.js"
+    "js-runner": "./bin/runner.js",
+    "js-runner-server": "./bin/server.js"
   },
   "husky": {
     "hooks": {

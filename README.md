@@ -35,8 +35,8 @@ npm install @rdfc/js-runner
 
 ### Remote runner usage
 
-The js-runner can also be used as a remote runner. To do this, start the runner in server mode `npx js-runner serve --config ./server.ttl`.
-This starts the remove server as configured in `server.ttl`
+The js-runner can also be used as a remote runner. To do this, start the runner server using `npx js-runner-server ./server.ttl`.
+This starts the remote server as configured in `server.ttl`
 
 ```turtle
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
@@ -67,6 +67,8 @@ This enables the user to configure the pipeline just like a normal pipeline. The
     rdfc:instantiates runner:runner;
   ].
 ```
+
+There is an example in `./examples/echo`, start the server with `npx js-runner-server ./server.ttl` and run the pipeline `npx rdfc ./remote_pipeline.ttl`.
 
 
 ## Logging
@@ -127,7 +129,7 @@ JavaScript/TypeScript processors must include the JavaScript specific configurat
 
 The JavaScript runner is implemented in TypeScript.
 The source code is contained in the `src` folder.
-The main cli entry point is the `bin/runner.js` file, which you can also run after installation of the package using `npx js-runner`.
+The main cli entry points are the `bin/runner.js` and `bin/server.js` files, which you can also run after installation of the package using `npx js-runner` and `npx js-runner-server` respectively.
 
 If you want to get started with the development of the js-runner, you can clone the repository and install the dependencies using the following commands.
 
