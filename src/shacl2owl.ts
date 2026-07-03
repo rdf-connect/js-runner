@@ -1,22 +1,15 @@
-import { glob, mkdir, readFile, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { Parser, Store, Writer } from "n3";
-import type { Quad } from "@rdfjs/types";
-import { createNamespace } from "@treecg/types";
+import { glob, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, relative, resolve } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { Parser, Store, Writer } from 'n3'
+import type { Quad } from '@rdfjs/types'
+import { createNamespace } from '@treecg/types'
 
 const OWL = createNamespace(
   'http://www.w3.org/2002/07/owl#',
   (x) => x,
   'imports',
 )
-
-// Resolve an owl:imports IRI to an absolute filesystem path.
-function iriToPath(iri: string, baseDir: string): string {
-  if (iri.startsWith('file:')) return fileURLToPath(iri)
-  if (isAbsolute(iri)) return iri
-  return resolve(baseDir, iri)
-}
 
 // True when `child` lives inside `parent`.
 function isInside(child: string, parent: string): boolean {
@@ -25,12 +18,15 @@ function isInside(child: string, parent: string): boolean {
 }
 
 // Parse Turtle into quads while collecting its prefix declarations.
-function parseTurtle(turtle: string, baseIRI: string): {
+function parseTurtle(
+  turtle: string,
+  baseIRI: string,
+): {
   quads: Quad[]
   prefixes: Record<string, string>
 } {
-  if (!baseIRI.startsWith("file:")) {
-    baseIRI = pathToFileURL(baseIRI).href;
+  if (!baseIRI.startsWith('file:')) {
+    baseIRI = pathToFileURL(baseIRI).href
   }
   const prefixes: Record<string, string> = {}
   const quads = new Parser({ baseIRI }).parse(turtle, null, (prefix, iri) => {
@@ -45,7 +41,7 @@ function mergeTurtle(baseIRI: string, ...turtles: string[]): Promise<string> {
   const store = new Store()
   const prefixes: Record<string, string> = {}
   for (const turtle of turtles) {
-    const parsed = parseTurtle(turtle, baseIRI);
+    const parsed = parseTurtle(turtle, baseIRI)
     store.addQuads(parsed.quads)
     Object.assign(prefixes, parsed.prefixes)
   }
@@ -63,8 +59,10 @@ function mergeTurtle(baseIRI: string, ...turtles: string[]): Promise<string> {
  * Each matched file is POSTed to the reasoning endpoint
  * (`SERVER_URL`, default `https://shacl2owl.knows.idlab.ugent.be/reason`). The output path is
  * the file's `owl:imports` target that, once expanded, is contained in `outDir`.
- * When no such `owl:imports` target exists, the output falls back to
- * `${outDir}/${filename}`, reusing the input file's name.
+ * Only local `file:` imports are considered: `owl:imports` values that are
+ * HTTP/HTTPS (or any other non-`file:`) URLs, or that resolve to a path outside
+ * `outDir`, are ignored. When no such `owl:imports` target exists, the output
+ * falls back to `${outDir}/${filename}`, reusing the input file's name.
  *
  * When several inputs resolve to the same output path within a single run, the
  * later results are pretty-appended: the existing file is parsed, the new quads
@@ -86,17 +84,20 @@ export async function shacl2owl(
     const turtle = await readFile(input, 'utf8')
 
     // Determine the output file: the owl:imports target that expands to a
-    // path contained in the output directory. When absent, fall back to the
-    // input file name inside outDir.
-    const { quads } = parseTurtle(turtle, input);
-    const baseDir = dirname(input)
-    const importQuad = quads.find(
+    // path contained in the output directory. Only local `file:` imports that
+    // resolve inside `outDir` qualify; non-file (HTTP/HTTPS) or outside targets
+    // are ignored. When absent, fall back to the input file name inside outDir.
+    const { quads } = parseTurtle(turtle, input)
+    const importIri = quads.find(
       (q) =>
         q.predicate.value === OWL.imports &&
-        isInside(iriToPath(q.object.value, baseDir), outDirPath),
-    )
-    const output = importQuad
-      ? iriToPath(importQuad.object.value, baseDir)
+        q.object.termType === 'NamedNode' &&
+        q.object.value.startsWith('file:') &&
+        isInside(fileURLToPath(q.object.value), outDirPath),
+    )?.object.value
+    // `importIri` is a `file:` URL; convert it to a filesystem path before use.
+    const outputPath = importIri
+      ? fileURLToPath(importIri)
       : resolve(outDirPath, basename(input))
 
     const res = await fetch(endpoint, {
@@ -112,14 +113,13 @@ export async function shacl2owl(
     }
 
     const reasoned = await res.text()
-    const outputPath = resolve(output)
     await mkdir(dirname(outputPath), { recursive: true })
 
     if (written.has(outputPath)) {
       // Already written this run: pretty-append by merging the existing graph
       // with the new quads and re-serializing.
       const existing = await readFile(outputPath, 'utf8')
-      const merged = await mergeTurtle(outputPath, existing, reasoned);
+      const merged = await mergeTurtle(outputPath, existing, reasoned)
       await writeFile(outputPath, merged, 'utf8')
       console.log(`Appended reasoned ${outputPath} (${merged.length} bytes)`)
     } else {
