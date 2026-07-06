@@ -9,8 +9,8 @@ import { extractShapes } from 'rdf-lens'
 import { NamedNode, Parser, Writer as N3Writer } from 'n3'
 import { readFile } from 'fs/promises'
 import winston, { createLogger } from 'winston'
-import { Processor } from '../processor'
-import { FullProc, Runner, Writable } from '../runner'
+import { Processor } from '../processor.js'
+import { FullProc, Runner, Writable } from '../runner.js'
 import { Quad } from '@rdfjs/types'
 import { createTermNamespace } from '@treecg/types'
 import {
@@ -18,11 +18,11 @@ import {
   SendingStreamControl,
   StreamChunk,
   StreamIdentify,
-} from '@rdfc/proto/lib/generated/common'
-import { MockClientDuplexStream } from './duplex'
+} from '@rdfc/proto/lib/generated/common.js'
+import { MockClientDuplexStream } from './duplex.js'
 import { promisify } from 'util'
-import { Reader } from '../reader'
-import { Writer } from '../writer'
+import { Reader } from '../reader.js'
+import { Writer } from '../writer.js'
 
 export function channel(runner: Runner, name: string): [Writer, Reader] {
   const n = new NamedNode(name)

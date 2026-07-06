@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
+    "rootDir": "./src",
     "declaration": true,
     "outDir": "lib/",
     "lib": ["ES2022"],
     "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "inlineSourceMap": true, // 🔴 Keeps source maps in JS files
     "inlineSources": true, // 🔴 Includes the original TS source in maps
     "preserveConstEnums": true,
-    "downlevelIteration": true,
     "skipLibCheck": true,
     "strict": true,
     "strictFunctionTypes": false,

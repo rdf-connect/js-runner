@@ -1,6 +1,6 @@
 import { Duplex } from 'stream'
 import type { ClientDuplexStream, InterceptingCall } from '@grpc/grpc-js'
-import { AuthContext } from '@grpc/grpc-js/build/src/auth-context'
+import { AuthContext } from '@grpc/grpc-js/build/src/auth-context.js'
 
 type Matcher<Req, T> = (req: Req) => T | undefined
 type Handler<Req, Res> = (req: Req, send: (res: Res) => void) => void

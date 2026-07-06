@@ -8,12 +8,12 @@ import {
   ReceivingMessage,
   ReceivingStreamMessage,
 } from '@rdfc/proto'
-import { Reader, ReaderInstance } from './reader'
-import { Writer, WriterInstance } from './writer'
-import { Processor as Proc } from './processor'
+import { Reader, ReaderInstance } from './reader.js'
+import { Writer, WriterInstance } from './writer.js'
+import { Processor as Proc } from './processor.js'
 import { createLogger, Logger } from 'winston'
 
-import { RpcTransport } from './logger'
+import { RpcTransport } from './logger.js'
 import { Cont, empty, extractShapes, Shapes } from 'rdf-lens'
 import { NamedNode, Parser } from 'n3'
 import { createNamespace, createUriAndTermNamespace, RDF } from '@treecg/types'

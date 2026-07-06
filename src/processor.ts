@@ -1,6 +1,6 @@
 import { Logger } from 'winston'
-import { Reader } from './reader'
-import { Writer } from './writer'
+import { Reader } from './reader.js'
+import { Writer } from './writer.js'
 
 export type Primitive = string | number | Writer | Reader | ProcessorArgs
 

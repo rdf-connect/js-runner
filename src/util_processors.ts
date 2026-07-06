@@ -1,5 +1,5 @@
-import { Processor } from './processor'
-import { Reader } from './reader'
+import { Processor } from './processor.js'
+import { Reader } from './reader.js'
 
 type LogArgs = {
   reader: Reader

@@ -1,4 +1,4 @@
-import { Any } from './reader'
+import { Any } from './reader.js'
 
 const decoder = new TextDecoder()
 export interface Convertor<T> {
