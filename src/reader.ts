@@ -12,8 +12,8 @@ import {
   NoConvertor,
   StreamConvertor,
   StringConvertor,
-} from './convertor'
-import { Writable } from './runner'
+} from './convertor.js'
+import { Writable } from './runner.js'
 import { promisify } from 'util'
 
 export type Any =
@@ -100,7 +100,7 @@ class MyIter<T> implements AsyncIterable<T> {
     }
   }
 
-  async *[Symbol.asyncIterator]() {
+  async *[Symbol.asyncIterator](): AsyncGenerator<T> {
     while (true) {
       if (this.queue.length > 0) {
         const { item, onComplete } = this.queue.shift()!

@@ -1,7 +1,7 @@
 import { FromRunner, RunnerClient } from '@rdfc/proto'
 import { promisify } from 'util'
 import { Logger } from 'winston'
-import { Any } from './reader'
+import { Any } from './reader.js'
 
 type Writable = (msg: FromRunner) => Promise<unknown>
 export type Handler<T = void> = [T] extends [void]

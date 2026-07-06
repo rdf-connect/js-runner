@@ -2,8 +2,8 @@ import * as grpc from '@grpc/grpc-js'
 import { promisify } from 'util'
 import { RunnerClient, ToRunner } from '@rdfc/proto'
 import { createLogger } from 'winston'
-import { RpcTransport } from './logger'
-import { Runner } from './runner'
+import { RpcTransport } from './logger.js'
+import { Runner } from './runner.js'
 
 export async function start(addr: string, uri: string) {
   const client = new RunnerClient(addr, grpc.credentials.createInsecure())
