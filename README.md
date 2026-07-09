@@ -32,7 +32,6 @@ You can install the js-runner package using the following command:
 npm install @rdfc/js-runner
 ```
 
-
 ### Remote runner usage
 
 The js-runner can also be used as a remote runner. To do this, start the runner server using `npx js-runner-server ./server.ttl`.
@@ -42,19 +41,19 @@ This starts the remote server as configured in `server.ttl`
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
 
 <> a rdfc:JsRunnerServer;
-  rdfc:port 3000;
+  rdfc:httpPort 3000;
+  rdfc:grpcPort 4001;
   # one or more processor definition files to host
   rdfc:processorConfig <./processors.ttl>.
 ```
 
-This enables the user to configure the pipeline just like a normal pipeline. The runner definition is automatically available at `localhost:{PORT}`.
-
+This enables the user to configure the pipeline just like a normal pipeline. The runner definition is automatically available at `localhost:{httpPort}`.
 
 ```turtle
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
 
-# the endpoint serving the example configuration 
+# the endpoint serving the example configuration
 @prefix runner: <http://localhost:3000/>.
 
 # import the runner and the processor definitions
@@ -64,12 +63,13 @@ This enables the user to configure the pipeline just like a normal pipeline. The
 <> a rdfc:Pipeline;
   rdfc:consistsOf [
     rdfc:processor <logProc>, <sendProc>;
-    rdfc:instantiates runner:runner;
+    rdfc:instantiates runner:jsRunner;
   ].
 ```
 
-There is an example in `./examples/echo`, start the server with `npx js-runner-server ./server.ttl` and run the pipeline `npx rdfc ./remote_pipeline.ttl`.
+The orchestrator connects to `runner:grpcPort` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
 
+There is an example in `./examples/echo`, start the server with `npx js-runner-server ./server.ttl` and run the pipeline `npx rdfc ./remote_pipeline.ttl`.
 
 ## Logging
 

@@ -42,8 +42,14 @@ export async function start(
   signal?: AbortSignal,
   state?: State,
   runnerId?: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  channelOverride?: any,
 ) {
-  const client = new RunnerClient(addr, grpc.credentials.createInsecure())
+  const client = channelOverride
+    ? new RunnerClient(addr, grpc.credentials.createInsecure(), {
+        channelOverride,
+      })
+    : new RunnerClient(addr, grpc.credentials.createInsecure())
 
   const logStream = client.logStream(() => {})
 

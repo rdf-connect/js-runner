@@ -1,10 +1,12 @@
-import { createServer, IncomingMessage } from 'node:http'
+import { createServer } from 'node:http'
+import { createServer as createTcpServer, Socket } from 'node:net'
 import { readFile } from 'node:fs/promises'
 import { resolve, relative } from 'node:path'
 import { Parser } from 'n3'
 import { extractShapes } from 'rdf-lens'
 import { start } from './client.js'
 import { State } from './state.js'
+import { SocketChannel } from './socketChannel.js'
 
 const RDFC = 'https://w3id.org/rdf-connect#'
 const OWL_IMPORTS = 'http://www.w3.org/2002/07/owl#imports'
@@ -21,8 +23,13 @@ const CONFIG_SHAPE_TTL = `
 [] a sh:NodeShape;
   sh:targetClass rdfc:JsRunnerServer;
   sh:property [
-    sh:path rdfc:port;
-    sh:name "port";
+    sh:path rdfc:httpPort;
+    sh:name "httpPort";
+    sh:maxCount 1;
+    sh:datatype xsd:integer;
+  ], [
+    sh:path rdfc:grpcPort;
+    sh:name "grpcPort";
     sh:maxCount 1;
     sh:datatype xsd:integer;
   ], [
@@ -35,7 +42,8 @@ const CONFIG_SHAPE_TTL = `
 const { lenses } = extractShapes(new Parser().parse(CONFIG_SHAPE_TTL))
 
 interface ServerConfig {
-  port: number
+  httpPort: number
+  grpcPort: number
   processorPaths: string[]
 }
 
@@ -46,12 +54,28 @@ interface ProcessorDescription {
   sourceFile: string
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
+function readLine(socket: Socket): Promise<string> {
   return new Promise((resolve, reject) => {
-    let body = ''
-    req.on('data', (chunk) => (body += chunk))
-    req.on('end', () => resolve(body))
-    req.on('error', reject)
+    let buffer = ''
+    const onData = (chunk: Buffer) => {
+      buffer += chunk.toString()
+      const idx = buffer.indexOf('\n')
+      if (idx !== -1) {
+        socket.removeListener('data', onData)
+        socket.removeListener('error', onError)
+        const remaining = buffer.slice(idx + 1)
+        if (remaining.length > 0) {
+          socket.unshift(Buffer.from(remaining))
+        }
+        resolve(buffer.slice(0, idx).trim())
+      }
+    }
+    const onError = (err: Error) => {
+      socket.removeListener('data', onData)
+      reject(err)
+    }
+    socket.on('data', onData)
+    socket.once('error', onError)
   })
 }
 
@@ -75,14 +99,15 @@ export async function parseServerConfig(
   const config = lenses[RDFC + 'JsRunnerServer'].execute({
     id: serverSubject,
     quads,
-  }) as { port?: number; processorConfigs?: string[] }
+  }) as { httpPort?: number; grpcPort?: number; processorConfigs?: string[] }
 
-  const port = config.port ?? 3000
+  const httpPort = config.httpPort ?? 3000
+  const grpcPort = config.grpcPort ?? 50051
   const processorPaths = (config.processorConfigs ?? []).map((val) =>
     val.startsWith('file://') ? val.slice('file://'.length) : val,
   )
 
-  return { port, processorPaths }
+  return { httpPort, grpcPort, processorPaths }
 }
 
 export async function buildWhitelist(
@@ -169,6 +194,7 @@ async function extractProcessorDescriptions(
 export async function generateIndexTtl(
   processorPaths: string[],
   cwd: string,
+  grpcPort: number,
 ): Promise<string> {
   const descriptions = await extractProcessorDescriptions(processorPaths)
 
@@ -208,9 +234,9 @@ rdfc:jsImplementationOf rdfs:subPropertyOf sds:implementationOf.
     sh:datatype xsd:string;
   ].
 
-<runner> a rdfc:HttpRunner;
+<jsRunner> a rdfc:HttpRunner;
   rdfc:handlesSubjectsOf rdfc:jsImplementationOf;
-  rdfc:endpoint <./connect>.
+  rdfc:grpcPort ${grpcPort}.
 `.split('\n')
 
   for (const desc of descriptions) {
@@ -395,10 +421,11 @@ function dashboardHtml(): string {
 
 export async function serve(configPath: string): Promise<void> {
   const absConfig = resolve(configPath)
-  const { port, processorPaths } = await parseServerConfig(absConfig)
+  const { httpPort, grpcPort, processorPaths } =
+    await parseServerConfig(absConfig)
   const whitelist = await buildWhitelist(processorPaths)
   const cwd = process.cwd()
-  const indexTtl = await generateIndexTtl(processorPaths, cwd)
+  const indexTtl = await generateIndexTtl(processorPaths, cwd, grpcPort)
   const state = new State()
 
   const activeConnections = new Set<AbortController>()
@@ -408,12 +435,50 @@ export async function serve(configPath: string): Promise<void> {
       `\nReceived ${signal}, closing ${activeConnections.size} active gRPC connection(s)...`,
     )
     for (const ctrl of activeConnections) ctrl.abort()
+    tcpServer.close()
     server.close(() => process.exit(0))
   }
 
   process.on('SIGINT', () => shutdown('SIGINT'))
   process.on('SIGTERM', () => shutdown('SIGTERM'))
 
+  // ── TCP server: accepts orchestrator connections on grpcPort ──────────────
+  //
+  // When the orchestrator wants to start a new pipeline instance it opens a
+  // plain TCP connection here, writes the runner URI terminated by '\n', and
+  // then treats its end of the socket as an incoming gRPC server connection
+  // (via grpc.Server.createConnectionInjector).
+  //
+  // The runner reverse-upgrades the socket via SocketChannel: an
+  // http2.ClientHttp2Session is created directly on orchSocket, and that
+  // session is used as the gRPC channel — no phantom TCP connection or local
+  // proxy required.
+  const tcpServer = createTcpServer(async (orchSocket) => {
+    try {
+      const uri = await readLine(orchSocket)
+      console.log(`Received connection for runner URI: ${uri}`)
+
+      const channel = new SocketChannel(orchSocket)
+      const runnerId = state.registerRunner('socket', uri)
+      const ctrl = new AbortController()
+      activeConnections.add(ctrl)
+
+      start('socket', uri, absConfig, ctrl.signal, state, runnerId, channel)
+        .catch((err) => {
+          console.error('gRPC connection error:', err)
+          state.markError(runnerId)
+        })
+        .finally(() => {
+          activeConnections.delete(ctrl)
+          state.deregisterRunner(runnerId)
+        })
+    } catch (err) {
+      console.error('TCP handler error:', err)
+      orchSocket.destroy()
+    }
+  })
+
+  // ── HTTP server: serves index.ttl, processor configs, and dashboard ───────
   const server = createServer(async (req, res) => {
     const method = req.method ?? 'GET'
     const url = req.url ?? '/'
@@ -480,66 +545,25 @@ export async function serve(configPath: string): Promise<void> {
       return
     }
 
-    // --- Connect: instantiate a new runner ---
-    if (method === 'POST' && url === '/connect') {
-      let body: string
-      try {
-        body = await readBody(req)
-      } catch {
-        res.writeHead(400, { 'Content-Type': 'text/plain' })
-        res.end('Failed to read request body')
-        return
-      }
-
-      let parsed: { host?: string; uri?: string }
-      try {
-        parsed = JSON.parse(body)
-      } catch {
-        res.writeHead(400, { 'Content-Type': 'text/plain' })
-        res.end('Invalid JSON')
-        return
-      }
-
-      const { host, uri } = parsed
-      if (typeof host !== 'string' || typeof uri !== 'string') {
-        res.writeHead(400, { 'Content-Type': 'text/plain' })
-        res.end('Missing host or uri')
-        return
-      }
-
-      const runnerId = state.registerRunner(host, uri)
-      const ctrl = new AbortController()
-      activeConnections.add(ctrl)
-
-      start(host, uri, absConfig, ctrl.signal, state, runnerId)
-        .catch((err) => {
-          console.error('gRPC connection error:', err)
-          state.markError(runnerId)
-        })
-        .finally(() => {
-          activeConnections.delete(ctrl)
-          state.deregisterRunner(runnerId)
-        })
-
-      res.writeHead(202, {
-        'Content-Type': 'application/json',
-        Location: '/dashboard',
-      })
-      res.end(JSON.stringify({ runnerId }))
-      return
-    }
-
     res.writeHead(404, { 'Content-Type': 'text/plain' })
     res.end('Not found')
   })
 
-  await new Promise<void>((resolve) => {
-    server.listen(port, () => {
-      console.log(`js-runner server listening on port ${port}`)
-      console.log(`  Dashboard: http://localhost:${port}/dashboard`)
-      console.log(`  Health:    http://localhost:${port}/health`)
-      console.log(`  State API: http://localhost:${port}/api/state`)
-      resolve()
-    })
-  })
+  await Promise.all([
+    new Promise<void>((res) => {
+      tcpServer.listen(grpcPort, () => {
+        console.log(`js-runner gRPC TCP server listening on port ${grpcPort}`)
+        res()
+      })
+    }),
+    new Promise<void>((res) => {
+      server.listen(httpPort, () => {
+        console.log(`js-runner HTTP server listening on port ${httpPort}`)
+        console.log(`  Dashboard: http://localhost:${httpPort}/dashboard`)
+        console.log(`  Health:    http://localhost:${httpPort}/health`)
+        console.log(`  State API: http://localhost:${httpPort}/api/state`)
+        res()
+      })
+    }),
+  ])
 }

@@ -6,7 +6,7 @@
 <> a rdfc:Pipeline;
   rdfc:consistsOf [
     rdfc:processor <logProc>, <sendProc>;
-    rdfc:instantiates runner:runner;
+    rdfc:instantiates runner:jsRunner;
   ].
 
 <sendProc> a rdfc:SendProcessor;
