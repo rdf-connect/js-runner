@@ -69,7 +69,7 @@ This enables the user to configure the pipeline just like a normal pipeline. The
 
 The orchestrator connects to `runner:grpcPort` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
 
-There is an example in `./examples/echo`, start the server with `npx js-runner-server ./server.ttl` and run the pipeline `npx rdfc ./remote_pipeline.ttl`.
+There is an example in the `./examples/echo` directory. Start the server with the command `npx js-runner-server ./server.ttl`, then run the pipeline with the command `npx rdfc ./remote_pipeline.ttl`.
 
 ## Logging
 

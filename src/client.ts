@@ -112,7 +112,10 @@ export async function start(
           await runner.handleOrchMessage(msg)
         }
 
-        logger.error('Stream ended')
+        // Stream ended without the runner completing normally
+        if (!runnerDone) {
+          rej(new Error('gRPC stream ended before runner completed'))
+        }
       } catch (err) {
         if (runnerDone) {
           // Stream error after runner finished (e.g. connection dropped during cleanup) — safe to ignore

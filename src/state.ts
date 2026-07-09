@@ -55,8 +55,7 @@ export class State {
   }
 
   deregisterRunner(id: string): void {
-    const r = this.runners.get(id)
-    if (r && r.status !== 'error') r.status = 'done'
+    this.runners.delete(id)
   }
 
   markError(id: string): void {

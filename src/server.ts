@@ -1,12 +1,20 @@
 import { createServer } from 'node:http'
 import { createServer as createTcpServer, Socket } from 'node:net'
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve, relative } from 'node:path'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 import { Parser } from 'n3'
 import { extractShapes } from 'rdf-lens'
 import { start } from './client.js'
 import { State } from './state.js'
 import { SocketChannel } from './socketChannel.js'
+
+// Dashboard HTML is read from the adjacent file at module load time.
+const DASHBOARD_HTML = readFileSync(
+  fileURLToPath(new URL('./dashboard.html', import.meta.url)),
+  'utf8',
+)
 
 const RDFC = 'https://w3id.org/rdf-connect#'
 const OWL_IMPORTS = 'http://www.w3.org/2002/07/owl#imports'
@@ -84,7 +92,7 @@ export async function parseServerConfig(
 ): Promise<ServerConfig> {
   const absConfig = resolve(configPath)
   const content = await readFile(absConfig, { encoding: 'utf8' })
-  const quads = new Parser({ baseIRI: 'file://' + absConfig }).parse(content)
+  const quads = new Parser({ baseIRI: pathToFileURL(absConfig).toString() }).parse(content)
 
   const serverSubject = quads.find(
     (q) =>
@@ -104,7 +112,7 @@ export async function parseServerConfig(
   const httpPort = config.httpPort ?? 3000
   const grpcPort = config.grpcPort ?? 50051
   const processorPaths = (config.processorConfigs ?? []).map((val) =>
-    val.startsWith('file://') ? val.slice('file://'.length) : val,
+    val.startsWith('file://') ? fileURLToPath(val) : val,
   )
 
   return { httpPort, grpcPort, processorPaths }
@@ -130,7 +138,7 @@ export async function buildWhitelist(
       continue
     }
 
-    const baseIRI = 'file://' + filePath
+    const baseIRI = pathToFileURL(filePath).toString()
     const quads = new Parser({ baseIRI }).parse(content)
 
     for (const quad of quads) {
@@ -140,7 +148,7 @@ export async function buildWhitelist(
       ) {
         const importVal = quad.object.value
         if (importVal.startsWith('file://')) {
-          todo.push(importVal.slice('file://'.length))
+          todo.push(fileURLToPath(importVal))
         }
       }
     }
@@ -162,7 +170,7 @@ async function extractProcessorDescriptions(
       continue
     }
 
-    const baseIRI = 'file://' + filePath
+    const baseIRI = pathToFileURL(filePath).toString()
     const quads = new Parser({ baseIRI }).parse(content)
 
     const seen = new Set<string>()
@@ -259,166 +267,6 @@ rdfc:jsImplementationOf rdfs:subPropertyOf sds:implementationOf.
   return lines.join('\n')
 }
 
-function dashboardHtml(): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>js-runner dashboard</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', monospace; background: #111; color: #ccc; padding: 1.5rem; }
-    h1 { color: #7ec8e3; margin-bottom: 1rem; font-size: 1.4rem; }
-    #updated { font-size: 0.75rem; color: #555; margin-bottom: 1.5rem; }
-    .runner { border: 1px solid #333; border-radius: 6px; padding: 1rem; margin-bottom: 1.25rem; }
-    .runner-meta { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 0.75rem; font-size: 0.85rem; }
-    .runner-meta span { color: #888; }
-    .runner-meta strong { color: #aaa; }
-    .status { font-weight: bold; }
-    .s-connecting { color: #f0a500; }
-    .s-running    { color: #4caf50; }
-    .s-done       { color: #666; }
-    .s-error      { color: #f44336; }
-    .g-IDLE              { color: #888; }
-    .g-CONNECTING        { color: #f0a500; }
-    .g-READY             { color: #4caf50; }
-    .g-TRANSIENT_FAILURE { color: #f44336; }
-    .g-SHUTDOWN          { color: #666; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    th, td { border: 1px solid #2a2a2a; padding: 0.4rem 0.8rem; text-align: left; white-space: nowrap; }
-    th { background: #1a1a1a; color: #7ec8e3; }
-    td.uri { color: #aaa; max-width: 28rem; overflow: hidden; text-overflow: ellipsis; }
-    td.role-reader { color: #81c784; }
-    td.role-writer { color: #64b5f6; }
-    .empty { color: #555; font-size: 0.8rem; padding-top: 0.5rem; }
-    .no-runners { color: #555; }
-  </style>
-</head>
-<body>
-  <h1>js-runner dashboard</h1>
-  <div id="updated"></div>
-  <div id="content"><p class="no-runners">Loading…</p></div>
-  <script>
-    const throughputState = {}
-
-    function esc(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    }
-    function fmtBytes(b) {
-      if (b < 1024) return b + ' B'
-      if (b < 1048576) return (b/1024).toFixed(1) + ' KB'
-      return (b/1048576).toFixed(1) + ' MB'
-    }
-    function fmtAge(ms) {
-      if (!ms) return '-'
-      const s = Math.floor((Date.now() - ms) / 1000)
-      if (s < 5) return 'just now'
-      if (s < 60) return s + 's ago'
-      if (s < 3600) return Math.floor(s/60) + 'm ago'
-      return Math.floor(s/3600) + 'h ago'
-    }
-    function fmtDuration(ms) {
-      const s = Math.floor((Date.now() - ms) / 1000)
-      if (s < 60) return s + 's'
-      if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's'
-      return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm'
-    }
-    function pct(arr, p) {
-      if (!arr || !arr.length) return '-'
-      const s = [...arr].sort((a,b) => a-b)
-      return s[Math.floor(p/100*s.length)] + 'ms'
-    }
-    function avg(arr) {
-      if (!arr || !arr.length) return '-'
-      return (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) + 'ms'
-    }
-    function throughput(key, count) {
-      const now = Date.now()
-      if (!throughputState[key]) { throughputState[key] = {count, time: now}; return '-' }
-      const dt = (now - throughputState[key].time) / 1000
-      const dc = count - throughputState[key].count
-      throughputState[key] = {count, time: now}
-      if (dt < 0.1) return '-'
-      return (dc / dt).toFixed(1) + '/s'
-    }
-
-    function renderChannels(runnerId, channels) {
-      const entries = Object.values(channels)
-      if (!entries.length) return '<p class="empty">No channels yet.</p>'
-      return \`<table>
-        <thead>
-          <tr>
-            <th>Channel URI</th>
-            <th>Role</th>
-            <th>Messages</th>
-            <th>Throughput</th>
-            <th>Bytes</th>
-            <th>Last msg</th>
-            <th>Avg latency</th>
-            <th>p50</th>
-            <th>p99</th>
-          </tr>
-        </thead>
-        <tbody>
-          \${entries.map(ch => {
-            const key = runnerId + ':' + ch.uri
-            const tp = throughput(key, ch.messageCount)
-            return \`<tr>
-              <td class="uri" title="\${esc(ch.uri)}">\${esc(ch.uri)}</td>
-              <td class="role-\${ch.role}">\${ch.role}</td>
-              <td>\${ch.messageCount}</td>
-              <td>\${tp}</td>
-              <td>\${fmtBytes(ch.bytesTotal)}</td>
-              <td>\${fmtAge(ch.lastMessageAt)}</td>
-              <td>\${ch.role === 'writer' ? avg(ch.latenciesMs) : '-'}</td>
-              <td>\${ch.role === 'writer' ? pct(ch.latenciesMs, 50) : '-'}</td>
-              <td>\${ch.role === 'writer' ? pct(ch.latenciesMs, 99) : '-'}</td>
-            </tr>\`
-          }).join('')}
-        </tbody>
-      </table>\`
-    }
-
-    function render(runners) {
-      const el = document.getElementById('content')
-      if (!runners.length) {
-        el.innerHTML = '<p class="no-runners">No runners registered yet.</p>'
-        return
-      }
-      el.innerHTML = runners.map(r => \`
-        <div class="runner">
-          <div class="runner-meta">
-            <span><strong>URI:</strong> \${esc(r.uri)}</span>
-            <span><strong>Host:</strong> \${esc(r.host)}</span>
-            <span><strong>Status:</strong> <span class="status s-\${r.status}">\${r.status}</span></span>
-            <span><strong>gRPC:</strong> <span class="g-\${r.grpcState}">\${r.grpcState}</span></span>
-            <span><strong>Uptime:</strong> \${fmtDuration(r.connectedAt)}</span>
-          </div>
-          \${renderChannels(r.id, r.channels)}
-        </div>
-      \`).join('')
-    }
-
-    async function refresh() {
-      try {
-        const res = await fetch('/api/state')
-        const data = await res.json()
-        render(data)
-        document.getElementById('updated').textContent =
-          'Last updated: ' + new Date().toLocaleTimeString()
-      } catch (e) {
-        document.getElementById('content').innerHTML =
-          '<p style="color:#f44336">Failed to fetch state: ' + esc(e.message) + '</p>'
-      }
-    }
-
-    refresh()
-    setInterval(refresh, 2000)
-  </script>
-</body>
-</html>`
-}
-
 export async function serve(configPath: string): Promise<void> {
   const absConfig = resolve(configPath)
   const { httpPort, grpcPort, processorPaths } =
@@ -509,7 +357,7 @@ export async function serve(configPath: string): Promise<void> {
     // --- Dashboard (HTML) ---
     if (method === 'GET' && url === '/dashboard') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-      res.end(dashboardHtml())
+      res.end(DASHBOARD_HTML)
       return
     }
 
