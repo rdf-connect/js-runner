@@ -1,0 +1,23 @@
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+rdfc:SendProcessor rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:entrypoint <../>;
+  rdfc:file <../lib/processors.js>;
+  rdfc:class "SendProcessor".
+
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:SendProcessor;
+  sh:property [
+    sh:path rdfc:writer;
+    sh:name "writer";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Writer;
+  ], [
+    sh:path rdfc:msg;
+    sh:name "msgs";
+    sh:datatype xsd:string;
+  ].
+

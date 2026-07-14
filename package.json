@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && tsc-alias",
+    "build": "tspc && tsc-alias",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "test": "npm run build && vitest run",
@@ -12,7 +12,8 @@
   },
   "bin": {
     "js-runner": "./bin/runner.js",
-    "rdfc-shacl2owl": "./bin/shacl2owl.js"
+    "rdfc-shacl2owl": "./bin/shacl2owl.js",
+    "js-runner-server": "./bin/server.js"
   },
   "husky": {
     "hooks": {
@@ -34,6 +35,7 @@
   "license": "MIT",
   "description": "JavaScript runner implementation for RDF-Connect",
   "devDependencies": {
+    "@ajuvercr/ts-transformer-inline-file": "^0.2.0",
     "@eslint/js": "^10.0.1",
     "@rdfjs/types": "^2.0.1",
     "@types/jsonld": "^1.5.15",
@@ -49,6 +51,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "prettier": "^3.9.4",
+    "ts-patch": "^4.0.1",
     "tsc-alias": "^1.9.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.63.0",

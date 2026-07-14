@@ -1,14 +1,15 @@
-@prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
 
-<> owl:imports <./node_modules/@rdfc/js-runner/index.ttl>,
-  <./processors/echo.ttl>,
-  <./processors/log.ttl>,
-  <./processors/send.ttl>.
+<> owl:imports <http://localhost:3000/>,
+  <http://localhost:3000/processors/send.ttl>,
+  <http://localhost:3000/processors/echo.ttl>,
+  <http://localhost:3000/processors/log.ttl>.
 
+#
 <> a rdfc:Pipeline;
   rdfc:consistsOf [
-    rdfc:instantiates rdfc:NodeRunner;
+    rdfc:instantiates <http://localhost:3000/jsRunner>;
     rdfc:processor <sender>, <echo>, <log>;
   ].
 
