@@ -9,14 +9,20 @@
 #
 <> a rdfc:Pipeline;
   rdfc:consistsOf [
-    rdfc:processor <logProc>, <sendProc>;
     rdfc:instantiates <http://localhost:3000/jsRunner>;
+    rdfc:processor <sender>, <echo>, <log>;
   ].
 
-<sendProc> a rdfc:SendProcessor;
-  rdfc:msg " Hello", " World";
-  rdfc:writer <data>.
+<1> a rdfc:Writer, rdfc:Reader.
+<2> a rdfc:Writer, rdfc:Reader.
+<sender> a rdfc:SendProcessor;
+  rdfc:writer <1>;
+  rdfc:msg "hallo", "world".
 
-<logProc> a rdfc:LogProcessor;
-  rdfc:reader <data>.
+<echo> a rdfc:EchoProcessor;
+  rdfc:reader <1>;
+  rdfc:writer <2>.
+
+<log> a rdfc:LogProcessor;
+  rdfc:reader <2>.
 

@@ -304,7 +304,8 @@ export class WriterInstance implements Writer {
    */
   handled(error?: string): void {
     if (this.awaitingProcessed.length > 0) {
-      const { resolve, reject, startMs, bytes } = this.awaitingProcessed.shift()!
+      const { resolve, reject, startMs, bytes } =
+        this.awaitingProcessed.shift()!
       if (error) {
         reject(new Error(error))
       } else {
