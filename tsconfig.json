@@ -17,8 +17,13 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "incremental": true,
+    "tsBuildInfoFile": "lib/.tsbuildinfo",
     "esModuleInterop": true,
-    "removeComments": true
+    "plugins": [
+      {
+        "transform": "@ajuvercr/ts-transformer-inline-file/transformer"
+      }
+    ]
   },
   "ts-node": {
     "esm": true,

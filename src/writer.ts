@@ -2,6 +2,7 @@ import { FromRunner, RunnerClient } from '@rdfc/proto'
 import { promisify } from 'util'
 import { Logger } from 'winston'
 import { Any } from './reader.js'
+import { ChannelTracker } from './state.js'
 
 type Writable = (msg: FromRunner) => Promise<unknown>
 export type Handler<T = void> = [T] extends [void]
@@ -90,6 +91,8 @@ export class WriterInstance implements Writer {
   private awaitingProcessed: Array<{
     resolve: () => void
     reject: (reason: Error) => void
+    startMs: number
+    bytes: number
   }> = []
 
   private openStreams: number = 0
@@ -97,11 +100,13 @@ export class WriterInstance implements Writer {
   private shouldClose: Array<() => void> = []
   private closed = false
   private _canceled = false
+  private remoteCloseReceived = false
 
   // Processors can subscribe here to stop upstream work when downstream cancels.
   private readonly cancelHandlers = new Set<Handler>()
 
   private readonly runnerId: string
+  private readonly tracker: ChannelTracker | undefined
 
   constructor(
     uri: string,
@@ -109,12 +114,14 @@ export class WriterInstance implements Writer {
     notifyOrchestrator: Writable,
     runnerId: string,
     logger: Logger,
+    tracker?: ChannelTracker,
   ) {
     this.client = client
     this.notifyOrchestrator = notifyOrchestrator
     this.uri = uri
     this.logger = logger
     this.runnerId = runnerId
+    this.tracker = tracker
   }
 
   get canceled(): boolean {
@@ -161,7 +168,7 @@ export class WriterInstance implements Writer {
     this.assertCanWrite()
     this.logger.debug(`${this.uri} sends buffer ${buffer.length} bytes`)
     const localSequenceNumber = this.localSequenceNumber++
-    const handledPromise = this.awaitProcessed()
+    const handledPromise = this.awaitProcessed(buffer.length)
 
     await this.notifyOrchestrator({
       msg: { data: buffer, channel: this.uri, localSequenceNumber },
@@ -180,7 +187,7 @@ export class WriterInstance implements Writer {
 
     try {
       // Message-level ack that signals the whole stream message is fully handled.
-      const handledPromise = this.awaitProcessed()
+      const handledPromise = this.awaitProcessed(0) // bytes unknown for streams
       const writeStreamMessageChunk = promisify(stream.write.bind(stream))
       const localSequenceNumber = this.localSequenceNumber++
       await writeStreamMessageChunk({
@@ -227,11 +234,12 @@ export class WriterInstance implements Writer {
     this.assertCanWrite()
     this.logger.debug(`${this.uri} sends string ${msg.length} characters`)
     const localSequenceNumber = this.localSequenceNumber++
-    const handledPromise = this.awaitProcessed()
+    const encoded = encoder.encode(msg)
+    const handledPromise = this.awaitProcessed(encoded.length)
 
     await this.notifyOrchestrator({
       msg: {
-        data: encoder.encode(msg),
+        data: encoded,
         channel: this.uri,
         localSequenceNumber,
       },
@@ -240,24 +248,45 @@ export class WriterInstance implements Writer {
     await handledPromise
   }
 
+  /**
+   * Gracefully closes this channel.
+   *
+   * Behavior:
+   * - If there are still active streams, closing is deferred until they complete.
+   * - If multiple callers invoke `close()` while waiting, their Promises are queued and
+   *   resolved once the channel actually closes.
+   * - A close message is sent to the remote only if the close was locally initiated and
+   *   the remote has not already sent a close.
+   * - A remote-initiated close (`issued = true`) also cancels the writer so future writes
+   *   fail and subscribed processors are notified to stop producing upstream work.
+   *
+   * @param issued - If true, indicates the close request originated remotely
+   */
   async close(issued = false): Promise<void> {
-    this.closed = true
-    if (issued && !this._canceled) {
-      // Remote initiated close: mark writer canceled to fail future writes.
-      this._canceled = true
+    if (issued) {
+      this.remoteCloseReceived = true
 
-      // Notify processors so they can stop producing upstream work as well.
-      await this.emitCancel()
+      if (!this._canceled) {
+        // Remote initiated close: mark writer canceled to fail future writes and
+        // notify processors so they can stop producing upstream work as well.
+        this._canceled = true
+        await this.emitCancel()
+      }
     }
-    // Case 1: Active streams still running → wait until they finish
+
+    // Case 1: Active streams still running → defer until they finish
     if (this.openStreams !== 0) {
       await new Promise<void>((resolve) => this.shouldClose.push(resolve))
       return
     }
 
-    // Case 2: No active streams → perform actual close
+    // Case 2: Already closed — nothing to do
+    if (this.closed) return
+    this.closed = true
+
+    // Case 3: No active streams → perform actual close
     this.logger.debug(`${this.uri} closes stream`)
-    if (!issued) {
+    if (!this.remoteCloseReceived) {
       await this.notifyOrchestrator({
         close: { channel: this.uri },
       })
@@ -275,10 +304,13 @@ export class WriterInstance implements Writer {
    */
   handled(error?: string): void {
     if (this.awaitingProcessed.length > 0) {
+      const { resolve, reject, startMs, bytes } = this.awaitingProcessed.shift()!
       if (error) {
-        this.awaitingProcessed.shift()!.reject(new Error(error))
+        reject(new Error(error))
       } else {
-        this.awaitingProcessed.shift()!.resolve()
+        const latencyMs = Date.now() - startMs
+        this.tracker?.recordMessage(bytes, latencyMs)
+        resolve()
       }
     } else if (this.closed || this._canceled) {
       // A late ack can arrive after a close/cancel race; nothing to resolve anymore.
@@ -305,9 +337,10 @@ export class WriterInstance implements Writer {
     )
   }
 
-  private awaitProcessed(): Promise<void> {
-    return new Promise((resolve, reject) =>
-      this.awaitingProcessed.push({ resolve, reject }),
-    )
+  private awaitProcessed(bytes: number): Promise<void> {
+    const startMs = Date.now()
+    return new Promise<void>((resolve, reject) => {
+      this.awaitingProcessed.push({ resolve, reject, startMs, bytes })
+    })
   }
 }

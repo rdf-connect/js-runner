@@ -32,6 +32,45 @@ You can install the js-runner package using the following command:
 npm install @rdfc/js-runner
 ```
 
+### Remote runner usage
+
+The js-runner can also be used as a remote runner. To do this, start the runner server using `npx js-runner-server ./server.ttl`.
+This starts the remote server as configured in `server.ttl`
+
+```turtle
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+<> a rdfc:JsRunnerServer;
+  rdfc:httpPort 3000;
+  rdfc:grpcPort 4001;
+  # one or more processor definition files to host
+  rdfc:processorConfig <./processors.ttl>.
+```
+
+This enables the user to configure the pipeline just like a normal pipeline. The runner definition is automatically available at `localhost:{httpPort}`.
+
+```turtle
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+# the endpoint serving the example configuration
+@prefix runner: <http://localhost:3000/>.
+
+# import the runner and the processor definitions
+<> owl:imports runner:, runner:processors.ttl.
+
+# setup the pipeline
+<> a rdfc:Pipeline;
+  rdfc:consistsOf [
+    rdfc:processor <logProc>, <sendProc>;
+    rdfc:instantiates runner:jsRunner;
+  ].
+```
+
+The orchestrator connects to `runner:grpcPort` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
+
+There is an example in the `./examples/echo` directory. Start the server with the command `npx js-runner-server ./server.ttl`, then run the pipeline with the command `npx rdfc ./remote_pipeline.ttl`.
+
 ## Logging
 
 The JavaScript runner and processors use the `winston` logging library for logging.
@@ -90,7 +129,7 @@ JavaScript/TypeScript processors must include the JavaScript specific configurat
 
 The JavaScript runner is implemented in TypeScript.
 The source code is contained in the `src` folder.
-The main cli entry point is the `bin/runner.js` file, which you can also run after installation of the package using `npx js-runner`.
+The main cli entry points are the `bin/runner.js` and `bin/server.js` files, which you can also run after installation of the package using `npx js-runner` and `npx js-runner-server` respectively.
 
 If you want to get started with the development of the js-runner, you can clone the repository and install the dependencies using the following commands.
 

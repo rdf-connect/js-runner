@@ -1,0 +1,18 @@
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+rdfc:LogProcessor rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:entrypoint <../>;
+  rdfc:file <../lib/processors.js>;
+  rdfc:class "LogProcessor".
+
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:LogProcessor;
+  sh:property [
+    sh:path rdfc:reader;
+    sh:name "reader";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Reader;
+  ].
+
