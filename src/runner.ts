@@ -112,7 +112,6 @@ export class Runner {
 
     const thing = './' + [...up, ...down].join('/')
     const configPath = this.configPath && pathToFileURL(this.configPath)
-    console.log({ configPath, thing, base, target })
     const final = new URL(thing, configPath)
     return final.href
   }
