@@ -15,6 +15,7 @@ import {
 } from './convertor.js'
 import { Writable } from './runner.js'
 import { promisify } from 'util'
+import { ChannelTracker } from './state.js'
 
 export type Any =
   | {
@@ -124,6 +125,7 @@ export class ReaderInstance implements Reader {
   readonly uri: string
   private logger: Logger
   private readonly notifyOrchestrator: Writable
+  private readonly tracker: ChannelTracker | undefined
 
   private consumers: MyIter<unknown>[] = []
   private closed = false
@@ -134,11 +136,13 @@ export class ReaderInstance implements Reader {
     client: RunnerClient,
     notifyOrchestrator: Writable,
     logger: Logger,
+    tracker?: ChannelTracker,
   ) {
     this.uri = uri
     this.client = client
     this.logger = logger
     this.notifyOrchestrator = notifyOrchestrator
+    this.tracker = tracker
   }
 
   anys(): AsyncIterable<Any> {
@@ -167,6 +171,7 @@ export class ReaderInstance implements Reader {
 
   handleMsg(msg: ReceivingMessage) {
     this.logger.debug(`${this.uri} handling message`)
+    this.tracker?.recordMessage(msg.data.length)
 
     if (this.closed) {
       this.notifyOrchestrator({
@@ -224,6 +229,7 @@ export class ReaderInstance implements Reader {
     globalSequenceNumber,
   }: ReceivingStreamMessage) {
     this.logger.debug(`${this.uri} handling streaming message`)
+    this.tracker?.recordMessage(0)
 
     if (this.closed) {
       await this.notifyOrchestrator({
@@ -257,7 +263,7 @@ export class ReaderInstance implements Reader {
     await writeControlMessage({ globalSequenceNumber })
 
     Promise.all(consumersConsumed).then(() => {
-      console.log('Writing processed for streaming message')
+      chunks.end()
       this.notifyOrchestrator({ processed: { globalSequenceNumber, channel } })
     })
   }

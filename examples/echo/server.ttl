@@ -1,0 +1,9 @@
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+<> a rdfc:JsRunnerServer;
+  rdfc:httpPort 3000;
+  rdfc:grpcPort 50051;
+  rdfc:hostname "localhost";
+  rdfc:processorConfig <./processors/echo.ttl>,
+    <./processors/send.ttl>,
+    <./processors/log.ttl>.
+

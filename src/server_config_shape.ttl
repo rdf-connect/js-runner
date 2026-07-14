@@ -1,0 +1,27 @@
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:JsRunnerServer;
+  sh:property [
+    sh:path rdfc:httpPort;
+    sh:name "httpPort";
+    sh:maxCount 1;
+    sh:datatype xsd:integer;
+  ], [
+    sh:path rdfc:grpcPort;
+    sh:name "grpcPort";
+    sh:maxCount 1;
+    sh:datatype xsd:integer;
+  ], [
+    sh:path rdfc:hostname;
+    sh:name "hostname";
+    sh:maxCount 1;
+    sh:datatype xsd:string;
+  ], [
+    sh:path rdfc:processorConfig;
+    sh:name "processorConfigs";
+    sh:datatype xsd:string;
+  ].
+
