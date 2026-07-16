@@ -20,6 +20,11 @@
     sh:maxCount 1;
     sh:datatype xsd:string;
   ], [
+    sh:path rdfc:historySize;
+    sh:name "historySize";
+    sh:maxCount 1;
+    sh:datatype xsd:integer;
+  ], [
     sh:path rdfc:processorConfig;
     sh:name "processorConfigs";
     sh:datatype xsd:string;

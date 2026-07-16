@@ -43,6 +43,8 @@ This starts the remote server as configured in `server.ttl`
 <> a rdfc:JsRunnerServer;
   rdfc:httpPort 3000;
   rdfc:grpcPort 4001;
+  # number of disconnected runners to keep for the dashboard (default: 5, 0 = keep all)
+  rdfc:historySize 5;
   # one or more processor definition files to host
   rdfc:processorConfig <./processors.ttl>.
 ```

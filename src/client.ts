@@ -46,6 +46,11 @@ export async function start(
   const client = new RunnerClient(addr, grpc.credentials.createInsecure())
 
   const logStream = client.logStream(() => {})
+  // Same rationale as the writer's stream: an abrupt disconnect (e.g. the
+  // orchestrator shutting down) can emit 'error' on this stream. It's just a
+  // log sink, so swallow it instead of letting an unhandled 'error' event
+  // crash the process.
+  logStream.on('error', () => {})
 
   const logger = createLogger({
     transports: [
@@ -97,10 +102,17 @@ export async function start(
           }
           if (msg.start) {
             if (state && runnerId) state.setStatus(runnerId, 'running')
-            runner.start().then(() => {
-              runnerDone = true
-              res(undefined)
-            })
+            runner.start().then(
+              () => {
+                runnerDone = true
+                res(undefined)
+              },
+              (err) => {
+                runnerDone = true
+                if (state && runnerId) state.markError(runnerId)
+                rej(err)
+              },
+            )
           }
 
           await runner.handleOrchMessage(msg)
