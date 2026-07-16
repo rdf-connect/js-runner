@@ -69,7 +69,7 @@ This enables the user to configure the pipeline just like a normal pipeline. The
 
 The orchestrator connects to `runner:grpcPort` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
 
-There is an example in the `./examples/echo` directory. Start the server with the command `npx js-runner-server ./server.ttl`, then run the pipeline with the command `npx rdfc ./remote_pipeline.ttl`.
+There is a minimal fixture used for the js-runner's own tests in `./__tests__/e2e`: start the server with the command `npx js-runner-server ./server.ttl`, then run the pipeline with the command `npx rdfc ./remote_pipeline.ttl`. For a real-world example pipeline, see [rdf-connect/example-pipelines](https://github.com/rdf-connect/example-pipelines).
 
 ## Logging
 
@@ -158,6 +158,10 @@ You can run the tests using:
 ```bash
 npm test
 ```
+
+This also runs the end-to-end test in `__tests__/e2e`, which runs a small pipeline through the
+real RDF-Connect orchestrator. You can also run that same pipeline manually to try out changes
+during development; see `__tests__/e2e/README.md` for instructions.
 
 You can then build the project using:
 

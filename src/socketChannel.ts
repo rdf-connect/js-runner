@@ -255,7 +255,7 @@ export class SocketChannel {
     _parent: unknown,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _flags: unknown,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): any {
     return new SocketCall(this.session, method)
   }

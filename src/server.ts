@@ -92,7 +92,9 @@ export async function parseServerConfig(
 ): Promise<ServerConfig> {
   const absConfig = resolve(configPath)
   const content = await readFile(absConfig, { encoding: 'utf8' })
-  const quads = new Parser({ baseIRI: pathToFileURL(absConfig).toString() }).parse(content)
+  const quads = new Parser({
+    baseIRI: pathToFileURL(absConfig).toString(),
+  }).parse(content)
 
   const serverSubject = quads.find(
     (q) =>

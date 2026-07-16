@@ -1,6 +1,7 @@
 {
-  "name": "echo",
+  "name": "js-runner-e2e",
   "version": "1.0.0",
+  "private": true,
   "main": "index.js",
   "scripts": {
     "build": "tsc"
@@ -8,11 +9,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Manual and automated end-to-end fixtures for the js-runner. Run `npx rdfc pipeline.ttl` here to manually try out a pipeline.",
   "dependencies": {
     "@rdfc/js-runner": "file:../.."
   },
   "devDependencies": {
+    "@rdfc/orchestrator-js": "^2.2.1",
     "typescript": "^5.8.2"
   }
 }
