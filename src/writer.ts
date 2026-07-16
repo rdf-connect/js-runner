@@ -185,21 +185,46 @@ export class WriterInstance implements Writer {
     const t = transform || ((x: unknown) => <Uint8Array>x)
     const stream = this.client.sendStreamMessage()
 
+    // grpc-js emits 'error' on this stream (e.g. "Connection dropped" when the
+    // orchestrator disconnects mid-stream). Without a listener, Node treats an
+    // unhandled 'error' event as fatal and crashes the process. Registering a
+    // listener here turns it into a normal rejection that `errorPromise` below
+    // surfaces at any point we're awaiting the stream.
+    let streamError: Error | undefined
+    const errorPromise = new Promise<never>((_, reject) => {
+      stream.on('error', (err: Error) => {
+        streamError = err
+        reject(err)
+      })
+    })
+    // Avoid an "unhandled rejection" warning if the error fires after we stop
+    // racing against it (e.g. once we've already moved past the await points).
+    errorPromise.catch(() => {})
+
+    const nextData = (): Promise<unknown> =>
+      Promise.race([
+        new Promise((res) => stream.once('data', res)),
+        errorPromise,
+      ])
+
     try {
       // Message-level ack that signals the whole stream message is fully handled.
       const handledPromise = this.awaitProcessed(0) // bytes unknown for streams
       const writeStreamMessageChunk = promisify(stream.write.bind(stream))
       const localSequenceNumber = this.localSequenceNumber++
-      await writeStreamMessageChunk({
-        id: {
-          channel: this.uri,
-          localSequenceNumber,
-          runner: this.runnerId,
-        },
-      })
+      await Promise.race([
+        writeStreamMessageChunk({
+          id: {
+            channel: this.uri,
+            localSequenceNumber,
+            runner: this.runnerId,
+          },
+        }),
+        errorPromise,
+      ])
 
       // First response confirms stream id registration on the remote side.
-      const id = await new Promise((res) => stream.once('data', res))
+      const id = await nextData()
 
       this.logger.debug(
         `${this.uri} streams message with id ${JSON.stringify(id)}`,
@@ -207,17 +232,26 @@ export class WriterInstance implements Writer {
 
       // TODO: don't await to allow consuming processors to read and handle in parallel.
       for await (const msg of buffer) {
-        const processedPromise = new Promise((res) => stream.once('data', res))
-        await writeStreamMessageChunk({ data: { data: t(msg) } })
+        const processedPromise = nextData()
+        await Promise.race([
+          writeStreamMessageChunk({ data: { data: t(msg) } }),
+          errorPromise,
+        ])
         // Await a message on the stream, indicating that the chunk has been processed
         await processedPromise
       }
 
       stream.end()
 
-      await handledPromise
+      await Promise.race([handledPromise, errorPromise])
     } finally {
       this.openStreams -= 1
+
+      if (streamError) {
+        this.logger.debug(
+          `${this.uri} stream ended with error: ${streamError.message}`,
+        )
+      }
 
       if (!stream.writableEnded) {
         stream.end()

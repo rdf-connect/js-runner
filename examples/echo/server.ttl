@@ -5,5 +5,6 @@
   rdfc:hostname "localhost";
   rdfc:processorConfig <./processors/echo.ttl>,
     <./processors/send.ttl>,
-    <./processors/log.ttl>.
+    <./processors/log.ttl>,
+    <./node_modules/@rdfc/http-utils-processor-ts/server.ttl>.
 

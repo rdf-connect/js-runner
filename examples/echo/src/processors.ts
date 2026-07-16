@@ -44,7 +44,7 @@ export class LogProcessor extends Processor<LogArgs> {
 
   async transform(this: LogArgs & this): Promise<void> {
     for await (const msg of this.reader.strings()) {
-      this.logger.info('Got msg' + msg)
+      this.logger.info('Got msg ' + msg)
     }
   }
   async produce(this: LogArgs & LogProcessor): Promise<void> {}

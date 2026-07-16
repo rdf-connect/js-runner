@@ -15,6 +15,7 @@ export interface RunnerStats {
   host: string
   uri: string
   connectedAt: number
+  disconnectedAt?: number
   status: RunnerStatus
   grpcState: string
   channels: Record<string, ChannelStats>
@@ -28,7 +29,16 @@ const MAX_LATENCY_SAMPLES = 100
 
 export class State {
   private readonly runners: Map<string, RunnerStats> = new Map()
+  // Most-recently-disconnected runners, newest first, capped at historySize
+  // (0 = unlimited), so the dashboard still has something to show after a
+  // runner disconnects.
+  private readonly history: RunnerStats[] = []
+  private readonly historySize: number
   private nextId = 1
+
+  constructor(historySize: number) {
+    this.historySize = Math.max(0, historySize)
+  }
 
   registerRunner(host: string, uri: string): string {
     const id = String(this.nextId++)
@@ -55,7 +65,16 @@ export class State {
   }
 
   deregisterRunner(id: string): void {
+    const r = this.runners.get(id)
+    if (!r) return
     this.runners.delete(id)
+
+    r.disconnectedAt = Date.now()
+    this.history.unshift(r)
+    // historySize === 0 means "keep all" (no trimming).
+    if (this.historySize > 0 && this.history.length > this.historySize) {
+      this.history.length = this.historySize
+    }
   }
 
   markError(id: string): void {
@@ -99,6 +118,6 @@ export class State {
   }
 
   snapshot(): RunnerStats[] {
-    return [...this.runners.values()]
+    return [...this.runners.values(), ...this.history]
   }
 }

@@ -39,6 +39,7 @@ interface ServerConfig {
   httpPort: number
   grpcPort: number
   hostname: string
+  historySize: number
   processorPaths: string[]
 }
 
@@ -134,16 +135,18 @@ export async function parseServerConfig(
     grpcPort?: number
     processorConfigs?: string[]
     hostname?: string
+    historySize?: number
   }
 
   const hostname = config.hostname ?? 'localhost'
   const httpPort = config.httpPort ?? 3000
   const grpcPort = config.grpcPort ?? 50051
+  const historySize = config.historySize ?? 5
   const processorPaths = (config.processorConfigs ?? []).map((val) =>
     val.startsWith('file://') ? fileURLToPath(val) : val,
   )
 
-  return { httpPort, grpcPort, processorPaths, hostname }
+  return { httpPort, grpcPort, processorPaths, hostname, historySize }
 }
 
 export async function buildWhitelist(
@@ -308,7 +311,7 @@ export async function generateIndexTtl(
 
 export async function serve(configPath: string): Promise<void> {
   const absConfig = resolve(configPath)
-  const { httpPort, grpcPort, processorPaths, hostname } =
+  const { httpPort, grpcPort, processorPaths, hostname, historySize } =
     await parseServerConfig(absConfig)
   const whitelist = await buildWhitelist(processorPaths)
   const cwd = process.cwd()
@@ -319,7 +322,7 @@ export async function serve(configPath: string): Promise<void> {
     grpcPort,
   )
 
-  const state = new State()
+  const state = new State(historySize)
 
   const activeConnections = new Set<AbortController>()
 
@@ -350,7 +353,8 @@ export async function serve(configPath: string): Promise<void> {
   const tcpServer = createTcpServer(async (orchSocket) => {
     try {
       const uri = await readLine(orchSocket)
-      console.log(`Received connection for runner URI: ${uri}`)
+      const connectedAt = Date.now()
+      console.log(`Orchestrator connected for runner URI: ${uri}`)
 
       const proxy = await createSocketProxy(orchSocket)
       const runnerId = state.registerRunner('socket', uri)
@@ -359,10 +363,15 @@ export async function serve(configPath: string): Promise<void> {
 
       start(proxy.target, uri, absConfig, ctrl.signal, state, runnerId)
         .catch((err) => {
-          console.error('gRPC connection error:', err)
+          const message = err instanceof Error ? err.message : String(err)
+          console.error(`gRPC connection error for runner URI ${uri}: ${message}`)
           state.markError(runnerId)
         })
         .finally(() => {
+          const connectedSecs = ((Date.now() - connectedAt) / 1000).toFixed(1)
+          console.log(
+            `Orchestrator disconnected for runner URI: ${uri} (connected for ${connectedSecs}s)`,
+          )
           activeConnections.delete(ctrl)
           proxy.close()
           state.deregisterRunner(runnerId)

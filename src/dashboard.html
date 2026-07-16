@@ -31,6 +31,10 @@
         padding: 1rem;
         margin-bottom: 1.25rem;
       }
+      .runner-disconnected {
+        opacity: 0.6;
+        border-style: dashed;
+      }
       .runner-meta {
         display: flex;
         flex-wrap: wrap;
@@ -216,13 +220,17 @@
         el.innerHTML = runners
           .map(
             (r) => `
-        <div class="runner">
+        <div class="runner${r.disconnectedAt ? ' runner-disconnected' : ''}">
           <div class="runner-meta">
             <span><strong>URI:</strong> ${esc(r.uri)}</span>
             <span><strong>Host:</strong> ${esc(r.host)}</span>
             <span><strong>Status:</strong> <span class="status s-${r.status}">${r.status}</span></span>
             <span><strong>gRPC:</strong> <span class="g-${r.grpcState}">${r.grpcState}</span></span>
-            <span><strong>Uptime:</strong> ${fmtDuration(r.connectedAt)}</span>
+            ${
+              r.disconnectedAt
+                ? `<span><strong>Disconnected:</strong> ${fmtAge(r.disconnectedAt)}</span>`
+                : `<span><strong>Uptime:</strong> ${fmtDuration(r.connectedAt)}</span>`
+            }
           </div>
           ${renderChannels(r.id, r.channels)}
         </div>

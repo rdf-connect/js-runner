@@ -4,14 +4,19 @@
 <> owl:imports <http://localhost:3000/>,
   <http://localhost:3000/processors/send.ttl>,
   <http://localhost:3000/processors/echo.ttl>,
-  <http://localhost:3000/processors/log.ttl>.
+  <http://localhost:3000/processors/log.ttl>,
+  <http://localhost:3000/node_modules/@rdfc/http-utils-processor-ts/server.ttl>.
 
 #
 <> a rdfc:Pipeline;
   rdfc:consistsOf [
     rdfc:instantiates <http://localhost:3000/jsRunner>;
-    rdfc:processor <sender>, <echo>, <log>;
+    rdfc:processor <server>, <echo>, <log>;
   ].
+
+<server> a rdfc:HttpServer;
+  rdfc:port 3001;
+  rdfc:writer <1>.
 
 <1> a rdfc:Writer, rdfc:Reader.
 <2> a rdfc:Writer, rdfc:Reader.

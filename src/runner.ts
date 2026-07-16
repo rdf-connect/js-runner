@@ -167,7 +167,14 @@ export class Runner {
       await Promise.all(this.processors.map((x) => x.produce()))
       await Promise.all(this.processorTransforms)
     } catch (ex: unknown) {
-      this.logger.error('Start failed: ' + JSON.stringify(ex))
+      const message = ex instanceof Error ? ex.message : String(ex)
+      this.logger.error(`Start failed: ${message}`)
+      if (ex instanceof Error && ex.stack) {
+        this.logger.debug(ex.stack)
+      }
+      // Re-throw so the caller (client.ts) knows the pipeline failed instead of
+      // treating this as a normal completion and silently closing the connection.
+      throw ex
     }
   }
 
