@@ -30,7 +30,7 @@ const MAX_LATENCY_SAMPLES = 100
 export class State {
   private readonly runners: Map<string, RunnerStats> = new Map()
   // Most-recently-disconnected runners, newest first, capped at historySize
-  // (0 = unlimited), so the dashboard still has something to show after a
+  // (-1 = unlimited), so the dashboard still has something to show after a
   // runner disconnects.
   private readonly history: RunnerStats[] = []
   private readonly historySize: number
@@ -71,7 +71,7 @@ export class State {
 
     r.disconnectedAt = Date.now()
     this.history.unshift(r)
-    // historySize === 0 means "keep all" (no trimming).
+    // historySize < 0 (i.e. -1) means "keep all" (no trimming).
     if (this.historySize >= 0 && this.history.length > this.historySize) {
       this.history.length = this.historySize
     }
