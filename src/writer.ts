@@ -99,6 +99,11 @@ export class WriterInstance implements Writer {
   // Close callers wait here while active streams are still flushing.
   private shouldClose: Array<() => void> = []
   private closed = false
+  // Set once the actual close (notify + resolve queued callers) has run, to
+  // make the recursive close() call from stream()'s finally block (and any
+  // redundant external close() calls) idempotent without delaying `closed`
+  // itself — see close() for why these can't be the same flag.
+  private closeFinalized = false
   private _canceled = false
   private remoteCloseReceived = false
 
@@ -308,15 +313,21 @@ export class WriterInstance implements Writer {
       }
     }
 
+    // Reject any further writes from this point on, even while we wait below
+    // for in-flight streams to finish — only writes already accepted before
+    // this call (assertCanWrite() already passed) may keep flowing.
+    this.closed = true
+
     // Case 1: Active streams still running → defer until they finish
     if (this.openStreams !== 0) {
       await new Promise<void>((resolve) => this.shouldClose.push(resolve))
       return
     }
 
-    // Case 2: Already closed — nothing to do
-    if (this.closed) return
-    this.closed = true
+    // Case 2: Actual close already ran (e.g. this is the recursive call from
+    // stream()'s finally, or a redundant external close()) — nothing to do
+    if (this.closeFinalized) return
+    this.closeFinalized = true
 
     // Case 3: No active streams → perform actual close
     this.logger.debug(`${this.uri} closes stream`)

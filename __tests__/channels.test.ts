@@ -153,6 +153,34 @@ describe('Writer', async () => {
     ])
   })
 
+  test('rejects a new write started while close is deferred on an open stream', async () => {
+    const uri = 'someUri'
+    const runner = 'myRunner'
+    const client = new StreamMsgMock(() => 1)
+
+    const msgs: FromRunner[] = []
+    const write = async (msg: FromRunner) => msgs.push(msg)
+    const writer = new WriterInstance(uri, client as any, write, runner, logger)
+
+    let closingPromise: Promise<void> | undefined = undefined
+    async function* gen() {
+      yield encoder.encode('hello')
+
+      // initiate close but the channel cannot close yet, as it has an open stream message
+      closingPromise = writer.close()
+
+      // an unrelated write started during the deferred close must be rejected
+      await expect(writer.string('too late')).rejects.toThrow(/closed/i)
+
+      yield encoder.encode('world')
+
+      setTimeout(() => writer.handled(), 20)
+    }
+
+    await writer.stream(gen())
+    await closingPromise!
+  })
+
   test('is marked canceled when connected reader cancels', async () => {
     const runner = createRunner()
     const [writer, reader] = channel(runner, 'cancel-channel')

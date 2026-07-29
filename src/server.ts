@@ -1,7 +1,7 @@
 import { createServer } from 'node:http'
 import { createServer as createTcpServer, Socket } from 'node:net'
 import { readFile } from 'node:fs/promises'
-import { resolve, relative } from 'node:path'
+import { dirname, resolve, relative } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import { Parser, DataFactory, Writer } from 'n3'
 import { extractShapes } from 'rdf-lens'
@@ -314,7 +314,11 @@ export async function serve(configPath: string): Promise<void> {
   const { httpPort, grpcPort, processorPaths, hostname, historySize } =
     await parseServerConfig(absConfig)
   const whitelist = await buildWhitelist(processorPaths)
-  const cwd = process.cwd()
+  // Anchor HTTP-served relative paths on the config file's own directory, not
+  // the shell's cwd — Runner.makeRelative re-resolves fetched file URLs
+  // against dirname(configPath), so the two must agree regardless of where
+  // js-runner-server was invoked from.
+  const cwd = dirname(absConfig)
   const indexTtl = await generateIndexTtl(
     processorPaths,
     cwd,
@@ -351,12 +355,41 @@ export async function serve(configPath: string): Promise<void> {
   // unmodified grpc-js channel in play — no channelOverride, no hand-rolled
   // framing.
   const tcpServer = createTcpServer(async (orchSocket) => {
+    // A bare Node socket throws (crashing the process) if 'error' fires with
+    // no listener attached. readLine() and createSocketProxy() each manage
+    // their own listener for the phase they own, but there are async gaps
+    // between those phases (e.g. the loopback server's listen() call,
+    // grpc-js lazily dialling it) where neither has one attached yet. This
+    // listener spans the whole connection lifetime so one is always present;
+    // it also records the error and force-destroys the socket so the check
+    // below can detect a death that happened before a runner was registered.
+    let socketError: Error | undefined
+    orchSocket.on('error', (err) => {
+      socketError = err
+      orchSocket.destroy()
+    })
+
     try {
       const uri = await readLine(orchSocket)
       const connectedAt = Date.now()
       console.log(`Orchestrator connected for runner URI: ${uri}`)
 
       const proxy = await createSocketProxy(orchSocket)
+
+      if (socketError) {
+        // orchSocket died while the loopback bridge was being set up (no
+        // grpc-js connection ever arrived to bridge). There's nothing to run
+        // a pipeline over, so tear the proxy down instead of registering a
+        // runner and calling start() against a dead socket — grpc-js would
+        // still connect to the still-listening loopback server, then hang
+        // piping from an already-destroyed source instead of failing fast.
+        console.error(
+          `Orchestrator disconnected for runner URI ${uri} before gRPC bridge was ready: ${socketError.message}`,
+        )
+        proxy.close()
+        return
+      }
+
       const runnerId = state.registerRunner('socket', uri)
       const ctrl = new AbortController()
       activeConnections.add(ctrl)
@@ -364,7 +397,9 @@ export async function serve(configPath: string): Promise<void> {
       start(proxy.target, uri, absConfig, ctrl.signal, state, runnerId)
         .catch((err) => {
           const message = err instanceof Error ? err.message : String(err)
-          console.error(`gRPC connection error for runner URI ${uri}: ${message}`)
+          console.error(
+            `gRPC connection error for runner URI ${uri}: ${message}`,
+          )
           state.markError(runnerId)
         })
         .finally(() => {

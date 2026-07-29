@@ -78,6 +78,8 @@ export async function start(
 
   try {
     logger.info('Connected with server ' + addr)
+
+    if (state && runnerId) state.setStatus(runnerId, 'connecting')
     const writable = promisify(stream.write.bind(stream))
     const runner = new Runner(
       client,
@@ -105,11 +107,15 @@ export async function start(
             runner.start().then(
               () => {
                 runnerDone = true
+                if (state && runnerId) state.setStatus(runnerId, 'done')
                 res(undefined)
               },
               (err) => {
                 runnerDone = true
-                if (state && runnerId) state.markError(runnerId)
+                if (state && runnerId) {
+                  state.setStatus(runnerId, 'error')
+                  state.markError(runnerId)
+                }
                 rej(err)
               },
             )

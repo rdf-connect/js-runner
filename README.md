@@ -38,6 +38,8 @@ The js-runner can also be used as a remote runner. To do this, start the runner 
 This starts the remote server as configured in `server.ttl`
 
 ```turtle
+# example server.ttl
+
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
 
 <> a rdfc:JsRunnerServer;
@@ -46,30 +48,33 @@ This starts the remote server as configured in `server.ttl`
   # number of disconnected runners to keep for the dashboard (default: 5, -1 = keep all)
   rdfc:historySize 5;
   # one or more processor definition files to host
-  rdfc:processorConfig <./processors.ttl>.
+  rdfc:processorConfig <./processors/echo.ttl>,
+    <./processors/send.ttl>,
+    <./processors/log.ttl>,
+    <./node_modules/@rdfc/http-utils-processor-ts/server.ttl>.
 ```
 
 This enables the user to configure the pipeline just like a normal pipeline. The runner definition is automatically available at `localhost:{httpPort}`.
 
 ```turtle
+# Example pipeline file using the remote runner
+
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
 
-# the endpoint serving the example configuration
-@prefix runner: <http://localhost:3000/>.
-
-# import the runner and the processor definitions
-<> owl:imports runner:, runner:processors.ttl.
+<> owl:imports <http://localhost:3000/>, # runner definition
+    <http://localhost:3000/processors/log.ttl>, # log processor definition
+    <http://localhost:3000/processors/send.ttl>. # send processor definition
 
 # setup the pipeline
 <> a rdfc:Pipeline;
   rdfc:consistsOf [
     rdfc:processor <logProc>, <sendProc>;
-    rdfc:instantiates runner:jsRunner;
+    rdfc:instantiates <http://localhost:3000/jsRunner>;
   ].
 ```
 
-The orchestrator connects to `runner:grpcPort` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
+The orchestrator connects to `runner:grpc` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
 
 There is an example in the `./examples/echo` directory. Start the server with the command `npx js-runner-server ./server.ttl`, then run the pipeline with the command `npx rdfc ./remote_pipeline.ttl`.
 
