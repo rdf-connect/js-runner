@@ -37,7 +37,7 @@ export class State {
   private nextId = 1
 
   constructor(historySize: number) {
-    this.historySize = Math.max(0, historySize)
+    this.historySize = Math.max(-1, historySize)
   }
 
   registerRunner(host: string, uri: string): string {
@@ -72,7 +72,7 @@ export class State {
     r.disconnectedAt = Date.now()
     this.history.unshift(r)
     // historySize === 0 means "keep all" (no trimming).
-    if (this.historySize > 0 && this.history.length > this.historySize) {
+    if (this.historySize >= 0 && this.history.length > this.historySize) {
       this.history.length = this.historySize
     }
   }
