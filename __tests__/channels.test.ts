@@ -1,8 +1,40 @@
 import { describe, expect, test, vi } from 'vitest'
 import { channel, createRunner, StreamMsgMock } from '../src/testUtils'
+import { MockClientDuplexStream } from '../src/testUtils/duplex'
 import { WriterInstance } from '../src/writer'
 import { FromRunner, StreamIdentify } from '@rdfc/proto'
+import {
+  ReceivingStreamControl,
+  StreamChunk,
+} from '@rdfc/proto/lib/generated/common.js'
 import { createLogger, transports } from 'winston'
+
+/**
+ * Stands in for a gRPC stream whose connection dies: the id handshake succeeds,
+ * then the first data chunk is answered with an 'error' event instead of an ack.
+ */
+class DroppingStreamMock {
+  sendStreamMessage(): MockClientDuplexStream<
+    StreamChunk,
+    ReceivingStreamControl
+  > {
+    const stream = new MockClientDuplexStream<
+      StreamChunk,
+      ReceivingStreamControl
+    >()
+    stream.register(
+      (x) => x.id,
+      (_id, send) => send({ streamSequenceNumber: 1 }),
+    )
+    stream.register(
+      (x) => x.data,
+      () => {
+        setTimeout(() => stream.emit('error', new Error('Connection dropped')))
+      },
+    )
+    return stream
+  }
+}
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
@@ -179,6 +211,56 @@ describe('Writer', async () => {
 
     await writer.stream(gen())
     await closingPromise!
+  })
+
+  test('keeps the ack queue aligned after a stream fails mid-flight', async () => {
+    const uri = 'someUri'
+    const runner = 'myRunner'
+    const client = new DroppingStreamMock()
+
+    const msgs: FromRunner[] = []
+    const write = async (msg: FromRunner) => msgs.push(msg)
+    const writer = new WriterInstance(uri, client as any, write, runner, logger)
+
+    async function* gen() {
+      yield encoder.encode('hello')
+    }
+
+    await expect(writer.stream(gen())).rejects.toThrow(/Connection dropped/)
+
+    // The dead stream must not leave its ack entry behind: the next write's ack
+    // would otherwise be consumed by the abandoned entry and never arrive.
+    const send = writer.string('after the failure')
+    writer.handled()
+    await expect(send).resolves.toBeUndefined()
+  })
+
+  test('settles deferred close callers when the close notification fails', async () => {
+    const uri = 'someUri'
+    const runner = 'myRunner'
+    const client = new StreamMsgMock(() => 1)
+
+    const write = async (msg: FromRunner) => {
+      if (msg.close) {
+        throw new Error('connection dropped')
+      }
+    }
+    const writer = new WriterInstance(uri, client as any, write, runner, logger)
+
+    let closingPromise: Promise<void> | undefined = undefined
+    async function* gen() {
+      yield encoder.encode('hello')
+
+      // Deferred: the channel still has an open stream message.
+      closingPromise = writer.close()
+
+      setTimeout(() => writer.handled(), 20)
+    }
+
+    // The stream itself completed, so its result must not be masked by the
+    // failure of the close that was deferred onto it.
+    await expect(writer.stream(gen())).resolves.toBeUndefined()
+    await expect(closingPromise!).rejects.toThrow(/connection dropped/)
   })
 
   test('is marked canceled when connected reader cancels', async () => {

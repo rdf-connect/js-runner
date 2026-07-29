@@ -80,6 +80,14 @@ export interface Writer {
   close(issued?: boolean): Promise<void>
 }
 const encoder = new TextEncoder()
+
+type AwaitingProcessed = {
+  resolve: () => void
+  reject: (reason: Error) => void
+  startMs: number
+  bytes: number
+}
+
 export class WriterInstance implements Writer {
   readonly uri: string
   localSequenceNumber: number = 1
@@ -88,16 +96,14 @@ export class WriterInstance implements Writer {
   private readonly logger: Logger
 
   // FIFO of message-level acknowledgements coming back from the orchestrator.
-  private awaitingProcessed: Array<{
-    resolve: () => void
-    reject: (reason: Error) => void
-    startMs: number
-    bytes: number
-  }> = []
+  private awaitingProcessed: Array<AwaitingProcessed> = []
 
   private openStreams: number = 0
   // Close callers wait here while active streams are still flushing.
-  private shouldClose: Array<() => void> = []
+  private shouldClose: Array<{
+    resolve: () => void
+    reject: (reason: Error) => void
+  }> = []
   private closed = false
   // Set once the actual close (notify + resolve queued callers) has run, to
   // make the recursive close() call from stream()'s finally block (and any
@@ -212,9 +218,16 @@ export class WriterInstance implements Writer {
         errorPromise,
       ])
 
+    // Message-level ack that signals the whole stream message is fully handled.
+    // Queued before the first await so that every exit path below — including
+    // the error races — can find it again and discard it.
+    const { promise: handledPromise, entry: handledEntry } =
+      this.enqueueProcessed(0) // bytes unknown for streams
+    // The finally block below may reject this entry after we've stopped
+    // awaiting it; keep that from surfacing as an unhandled rejection.
+    handledPromise.catch(() => {})
+
     try {
-      // Message-level ack that signals the whole stream message is fully handled.
-      const handledPromise = this.awaitProcessed(0) // bytes unknown for streams
       const writeStreamMessageChunk = promisify(stream.write.bind(stream))
       const localSequenceNumber = this.localSequenceNumber++
       await Promise.race([
@@ -262,9 +275,25 @@ export class WriterInstance implements Writer {
         stream.end()
       }
 
-      // If a close call was deferred while streaming, complete it now.
+      // No-op on the happy path (handled() already dequeued it); on any
+      // abnormal exit this is what keeps the ack FIFO in step with the writes.
+      this.discardProcessed(
+        handledEntry,
+        streamError ??
+          new Error(`Stream message on channel ${this.uri} did not complete`),
+      )
+
+      // If a close call was deferred while streaming, complete it now. Its
+      // failure belongs to the close() callers — drainShouldClose() has already
+      // handed it to them — so don't let it replace this stream's own result.
       if (this.shouldClose.length > 0) {
-        await this.close()
+        try {
+          await this.close()
+        } catch (error: unknown) {
+          this.logger.debug(
+            `${this.uri} deferred close failed: ${String(error)}`,
+          )
+        }
       }
     }
   }
@@ -320,7 +349,9 @@ export class WriterInstance implements Writer {
 
     // Case 1: Active streams still running → defer until they finish
     if (this.openStreams !== 0) {
-      await new Promise<void>((resolve) => this.shouldClose.push(resolve))
+      await new Promise<void>((resolve, reject) =>
+        this.shouldClose.push({ resolve, reject }),
+      )
       return
     }
 
@@ -331,16 +362,20 @@ export class WriterInstance implements Writer {
 
     // Case 3: No active streams → perform actual close
     this.logger.debug(`${this.uri} closes stream`)
-    if (!this.remoteCloseReceived) {
-      await this.notifyOrchestrator({
-        close: { channel: this.uri },
-      })
-    }
-
-    let resolve = this.shouldClose.pop()
-    while (resolve) {
-      resolve()
-      resolve = this.shouldClose.pop()
+    let closeError: Error | undefined
+    try {
+      if (!this.remoteCloseReceived) {
+        await this.notifyOrchestrator({
+          close: { channel: this.uri },
+        })
+      }
+    } catch (error: unknown) {
+      closeError = error instanceof Error ? error : new Error(String(error))
+      throw error
+    } finally {
+      // Always in a finally: a notify that fails on a dead connection would
+      // otherwise leave every deferred close() caller parked forever.
+      this.drainShouldClose(closeError)
     }
   }
 
@@ -384,9 +419,52 @@ export class WriterInstance implements Writer {
   }
 
   private awaitProcessed(bytes: number): Promise<void> {
+    return this.enqueueProcessed(bytes).promise
+  }
+
+  /**
+   * Same as {@link awaitProcessed}, but also hands back the queued entry so the
+   * caller can {@link discardProcessed} it if the write never reaches the point
+   * where an ack could arrive.
+   */
+  private enqueueProcessed(bytes: number): {
+    promise: Promise<void>
+    entry: AwaitingProcessed
+  } {
     const startMs = Date.now()
-    return new Promise<void>((resolve, reject) => {
-      this.awaitingProcessed.push({ resolve, reject, startMs, bytes })
+    let entry!: AwaitingProcessed
+    const promise = new Promise<void>((resolve, reject) => {
+      entry = { resolve, reject, startMs, bytes }
+      this.awaitingProcessed.push(entry)
     })
+    return { promise, entry }
+  }
+
+  /**
+   * Removes an entry that will never be acked from the FIFO.
+   *
+   * `handled()` matches acks to writes positionally, so an entry left behind by
+   * an aborted write silently steals the ack of the *next* write — which then
+   * waits forever. No-op once the entry has already been acked.
+   */
+  private discardProcessed(entry: AwaitingProcessed, reason: Error) {
+    const idx = this.awaitingProcessed.indexOf(entry)
+    if (idx !== -1) {
+      this.awaitingProcessed.splice(idx, 1)
+      entry.reject(reason)
+    }
+  }
+
+  /** Wakes every caller parked in {@link shouldClose} once the close resolved. */
+  private drainShouldClose(error?: Error) {
+    let waiter = this.shouldClose.pop()
+    while (waiter) {
+      if (error) {
+        waiter.reject(error)
+      } else {
+        waiter.resolve()
+      }
+      waiter = this.shouldClose.pop()
+    }
   }
 }

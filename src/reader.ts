@@ -239,6 +239,23 @@ export class ReaderInstance implements Reader {
     }
 
     const chunks = this.client.receiveStreamMessage()
+
+    // fanoutStream() forwards the failure to the consumers; this side reports it
+    // back to the orchestrator, which would otherwise wait forever for the
+    // `processed` reply that the Promise.all below can no longer send.
+    chunks.on('error', (err: Error) => {
+      this.logger.error(
+        `${this.uri} stream message ${globalSequenceNumber} dropped: ${err.message}`,
+      )
+      Promise.resolve(
+        this.notifyOrchestrator({
+          processed: { globalSequenceNumber, channel, error: err.message },
+        }),
+      ).catch(() => {
+        // The connection that just died is the one we'd report over.
+      })
+    })
+
     const writeControlMessage = promisify(chunks.write.bind(chunks))
     const consumersConsumed = []
 
@@ -278,9 +295,13 @@ function fanoutStream<T>(
   numConsumers: number,
   onAllHandled: () => void | Promise<void>,
 ): AsyncIterable<T>[] {
-  type Waiter = (value: IteratorResult<T>) => void
+  type Waiter = {
+    resolve: (value: IteratorResult<T>) => void
+    reject: (reason: Error) => void
+  }
 
   let ended = false
+  let failure: Error | undefined
   const buffer: T[] = []
   const pending: Waiter[] = []
   let activeConsumers = numConsumers
@@ -297,7 +318,7 @@ function fanoutStream<T>(
     while (buffer.length > 0 && pending.length > 0) {
       const chunk = buffer[0] // keep until all consumers ack
       const waiter = pending.shift()!
-      waiter({ value: chunk, done: false })
+      waiter.resolve({ value: chunk, done: false })
       awaitingAck++
     }
   }
@@ -306,7 +327,16 @@ function fanoutStream<T>(
     ended = true
     while (pending.length > 0) {
       const waiter = pending.shift()!
-      waiter({ value: undefined, done: true })
+      waiter.resolve({ value: undefined, done: true })
+    }
+  }
+
+  function fail(err: Error) {
+    failure = err
+    ended = true
+    while (pending.length > 0) {
+      const waiter = pending.shift()!
+      waiter.reject(err)
     }
   }
 
@@ -318,12 +348,12 @@ function fanoutStream<T>(
     end()
   })
 
-  stream.on('error', (err) => {
-    while (pending.length > 0) {
-      const waiter = pending.shift()!
-      waiter({ value: undefined, done: true })
-    }
-    throw err
+  // Rethrowing here would escape as an uncaught exception — an 'error' listener
+  // runs outside any await, so nothing can catch it and the process dies. Hand
+  // the failure to the consumers instead, so it surfaces as a rejection where
+  // they iterate the stream.
+  stream.on('error', (err: Error) => {
+    fail(err)
   })
 
   function makeIterable(): AsyncIterable<T> {
@@ -331,6 +361,9 @@ function fanoutStream<T>(
       [Symbol.asyncIterator]() {
         return {
           next(): Promise<IteratorResult<T>> {
+            if (failure) {
+              return Promise.reject(failure)
+            }
             if (buffer.length > 0) {
               const chunk = buffer[0]
               awaitingAck++
@@ -339,8 +372,8 @@ function fanoutStream<T>(
             if (ended) {
               return Promise.resolve({ value: undefined, done: true })
             }
-            return new Promise((resolve) => {
-              pending.push(resolve)
+            return new Promise((resolve, reject) => {
+              pending.push({ resolve, reject })
             })
           },
           async return() {

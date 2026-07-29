@@ -142,8 +142,12 @@ export async function parseServerConfig(
   const httpPort = config.httpPort ?? 3000
   const grpcPort = config.grpcPort ?? 50051
   const historySize = config.historySize ?? 5
+  // Both the whitelist and the HTTP handler key on absolute paths, so anchor
+  // relative values on the config's own directory here — leaving them relative
+  // would load fine at startup but never match a request.
+  const configDir = dirname(absConfig)
   const processorPaths = (config.processorConfigs ?? []).map((val) =>
-    val.startsWith('file://') ? fileURLToPath(val) : val,
+    val.startsWith('file://') ? fileURLToPath(val) : resolve(configDir, val),
   )
 
   return { httpPort, grpcPort, processorPaths, hostname, historySize }
@@ -186,6 +190,25 @@ export async function buildWhitelist(
   }
 
   return whitelist
+}
+
+/**
+ * Reduces a raw `req.url` to the path it addresses: query string dropped and
+ * percent-escapes decoded. Both matter for the whitelist lookup, which is an
+ * exact match against absolute paths — `/processors/echo.ttl?v=2` and
+ * `/node_modules/%40rdfc/echo.ttl` must resolve to the same files as their
+ * plain spellings instead of 403ing.
+ *
+ * @returns the decoded path, or undefined if the URL is malformed
+ */
+export function parseRequestPath(url: string): string | undefined {
+  try {
+    // The base is irrelevant — req.url is always origin-relative — but URL
+    // needs one to parse.
+    return decodeURIComponent(new URL(url, 'http://localhost').pathname)
+  } catch {
+    return undefined
+  }
 }
 
 async function extractProcessorDescriptions(
@@ -420,10 +443,16 @@ export async function serve(configPath: string): Promise<void> {
   // ── HTTP server: serves index.ttl, processor configs, and dashboard ───────
   const server = createServer(async (req, res) => {
     const method = req.method ?? 'GET'
-    const url = req.url ?? '/'
+    const path = parseRequestPath(req.url ?? '/')
+
+    if (path === undefined) {
+      res.writeHead(400, { 'Content-Type': 'text/plain' })
+      res.end('Bad request')
+      return
+    }
 
     // --- Health check ---
-    if (method === 'GET' && url === '/health') {
+    if (method === 'GET' && path === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(
         JSON.stringify({
@@ -436,7 +465,7 @@ export async function serve(configPath: string): Promise<void> {
     }
 
     // --- State API (JSON) ---
-    if (method === 'GET' && url === '/api/state') {
+    if (method === 'GET' && path === '/api/state') {
       res.writeHead(200, {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
@@ -446,14 +475,14 @@ export async function serve(configPath: string): Promise<void> {
     }
 
     // --- Dashboard (HTML) ---
-    if (method === 'GET' && url === '/dashboard') {
+    if (method === 'GET' && path === '/dashboard') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       res.end(DASHBOARD_HTML)
       return
     }
 
     // --- Index Turtle ---
-    if (method === 'GET' && url === '/') {
+    if (method === 'GET' && path === '/') {
       res.writeHead(200, { 'Content-Type': 'text/turtle' })
       res.end(indexTtl)
       return
@@ -461,8 +490,7 @@ export async function serve(configPath: string): Promise<void> {
 
     // --- Whitelisted processor files ---
     if (method === 'GET') {
-      const reqPath = url.startsWith('/') ? url.slice(1) : url
-      const absPath = resolve(cwd, reqPath)
+      const absPath = resolve(cwd, path.startsWith('/') ? path.slice(1) : path)
 
       if (!whitelist.has(absPath)) {
         res.writeHead(403, { 'Content-Type': 'text/plain' })
@@ -488,21 +516,37 @@ export async function serve(configPath: string): Promise<void> {
     res.end('Not found')
   })
 
-  await Promise.all([
-    new Promise<void>((res) => {
-      tcpServer.listen(grpcPort, () => {
-        console.log(`js-runner gRPC TCP server listening on port ${grpcPort}`)
-        res()
-      })
-    }),
-    new Promise<void>((res) => {
-      server.listen(httpPort, () => {
-        console.log(`js-runner HTTP server listening on port ${httpPort}`)
-        console.log(`  Dashboard: http://localhost:${httpPort}/dashboard`)
-        console.log(`  Health:    http://localhost:${httpPort}/health`)
-        console.log(`  State API: http://localhost:${httpPort}/api/state`)
-        res()
-      })
-    }),
-  ])
+  // A listen() failure (EADDRINUSE is the common one — a stale instance, or the
+  // default ports taken) surfaces as an 'error' event, not a rejection. Without
+  // a listener attached before listen(), Node turns it into an uncaught
+  // exception that serve()'s caller cannot catch, and this Promise.all would
+  // never settle.
+  try {
+    await Promise.all([
+      new Promise<void>((res, rej) => {
+        tcpServer.once('error', rej)
+        tcpServer.listen(grpcPort, () => {
+          console.log(`js-runner gRPC TCP server listening on port ${grpcPort}`)
+          res()
+        })
+      }),
+      new Promise<void>((res, rej) => {
+        server.once('error', rej)
+        server.listen(httpPort, () => {
+          console.log(`js-runner HTTP server listening on port ${httpPort}`)
+          console.log(`  Dashboard: http://localhost:${httpPort}/dashboard`)
+          console.log(`  Health:    http://localhost:${httpPort}/health`)
+          console.log(`  State API: http://localhost:${httpPort}/api/state`)
+          res()
+        })
+      }),
+    ])
+  } catch (err) {
+    // One of the two bound successfully in most cases; release it so the
+    // process can exit instead of lingering on a half-started server. The
+    // callbacks absorb the "not running" error for whichever one never bound.
+    tcpServer.close(() => {})
+    server.close(() => {})
+    throw err
+  }
 }
