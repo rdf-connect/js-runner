@@ -251,6 +251,10 @@ export class WriterInstance implements Writer {
       // TODO: don't await to allow consuming processors to read and handle in parallel.
       for await (const msg of buffer) {
         const processedPromise = nextData()
+        // The chunk write below may lose its own race against errorPromise, in
+        // which case we leave the loop without ever awaiting this ack. Keep
+        // that from surfacing as an unhandled rejection.
+        processedPromise.catch(() => {})
         await Promise.race([
           writeStreamMessageChunk({ data: { data: t(msg) } }),
           errorPromise,

@@ -36,6 +36,54 @@ class DroppingStreamMock {
   }
 }
 
+/**
+ * Same as {@link DroppingStreamMock}, but the connection dies while the data
+ * chunk write is still in flight: its callback is never invoked, so the write
+ * itself is what loses the race against the 'error' event.
+ */
+class HangingStreamMock {
+  sendStreamMessage(): MockClientDuplexStream<
+    StreamChunk,
+    ReceivingStreamControl
+  > {
+    const stream = new MockClientDuplexStream<
+      StreamChunk,
+      ReceivingStreamControl
+    >()
+    stream.register(
+      (x) => x.id,
+      (_id, send) => send({ streamSequenceNumber: 1 }),
+    )
+
+    const write = stream._write.bind(stream)
+    stream._write = (chunk, encoding, callback) => {
+      if (chunk.data) {
+        setTimeout(() => stream.emit('error', new Error('Connection dropped')))
+        return // never calls back: the write stays pending forever
+      }
+      write(chunk, encoding, callback)
+    }
+    return stream
+  }
+}
+
+/** Collects process-level unhandled rejections raised while `fn` runs. */
+async function captureUnhandledRejections(
+  fn: () => Promise<void>,
+): Promise<unknown[]> {
+  const rejections: unknown[] = []
+  const onUnhandled = (reason: unknown) => rejections.push(reason)
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    await fn()
+    // Node reports unhandled rejections once the microtask queue has drained.
+    await new Promise((res) => setTimeout(res, 20))
+  } finally {
+    process.off('unhandledRejection', onUnhandled)
+  }
+  return rejections
+}
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -233,6 +281,27 @@ describe('Writer', async () => {
     const send = writer.string('after the failure')
     writer.handled()
     await expect(send).resolves.toBeUndefined()
+  })
+
+  test('does not leak a rejection when the stream dies mid-chunk-write', async () => {
+    const uri = 'someUri'
+    const runner = 'myRunner'
+    const client = new HangingStreamMock()
+
+    const write = async (_msg: FromRunner) => {}
+    const writer = new WriterInstance(uri, client as any, write, runner, logger)
+
+    async function* gen() {
+      yield encoder.encode('hello')
+    }
+
+    const rejections = await captureUnhandledRejections(async () => {
+      // The pending ack we set up for this chunk is abandoned when the write
+      // loses the race; nobody is left to handle its rejection.
+      await expect(writer.stream(gen())).rejects.toThrow(/Connection dropped/)
+    })
+
+    expect(rejections).toEqual([])
   })
 
   test('settles deferred close callers when the close notification fails', async () => {

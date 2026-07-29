@@ -243,7 +243,9 @@ export class ReaderInstance implements Reader {
     // fanoutStream() forwards the failure to the consumers; this side reports it
     // back to the orchestrator, which would otherwise wait forever for the
     // `processed` reply that the Promise.all below can no longer send.
+    let streamFailed = false
     chunks.on('error', (err: Error) => {
+      streamFailed = true
       this.logger.error(
         `${this.uri} stream message ${globalSequenceNumber} dropped: ${err.message}`,
       )
@@ -270,9 +272,22 @@ export class ReaderInstance implements Reader {
     )
 
     for (const consumer of this.consumers) {
+      const messageIterator = messageIterators.pop()!
       consumersConsumed.push(
         new Promise((res) =>
-          consumer.pushStream(messageIterators.pop()!, () => res(null)),
+          // pushStream() is async: buffering convertors (strings/buffers/...)
+          // drain the iterator inside it, so a dropped stream rejects here
+          // rather than in the consumer. Settle either way — leaving this
+          // pending would strand the Promise.all below, and leaving it
+          // unhandled would take the process down.
+          consumer
+            .pushStream(messageIterator, () => res(null))
+            .catch((err) => {
+              this.logger.debug(
+                `${this.uri} consumer did not receive stream message ${globalSequenceNumber}: ${err}`,
+              )
+              res(null)
+            }),
         ),
       )
     }
@@ -280,6 +295,11 @@ export class ReaderInstance implements Reader {
     await writeControlMessage({ globalSequenceNumber })
 
     Promise.all(consumersConsumed).then(() => {
+      // The 'error' handler above already reported this message as failed; a
+      // second `processed` for the same sequence number would double-ack it.
+      if (streamFailed) {
+        return
+      }
       chunks.end()
       this.notifyOrchestrator({ processed: { globalSequenceNumber, channel } })
     })

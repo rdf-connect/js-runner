@@ -31,6 +31,23 @@ class DroppingReceiveMock {
   }
 }
 
+/** Collects process-level unhandled rejections raised while `fn` runs. */
+async function captureUnhandledRejections(
+  fn: () => Promise<void>,
+): Promise<unknown[]> {
+  const rejections: unknown[] = []
+  const onUnhandled = (reason: unknown) => rejections.push(reason)
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    await fn()
+    // Node reports unhandled rejections once the microtask queue has drained.
+    await new Promise((res) => setTimeout(res, 20))
+  } finally {
+    process.off('unhandledRejection', onUnhandled)
+  }
+  return rejections
+}
+
 describe('ReaderInstance', () => {
   test('surfaces a dropped stream connection to its consumers', async () => {
     const uri = 'someUri'
@@ -54,6 +71,46 @@ describe('ReaderInstance', () => {
     client.stream.emit('error', new Error('Connection dropped'))
 
     await expect(consumed).rejects.toThrow(/Connection dropped/)
+  })
+
+  test('does not leak a rejection when a buffering consumer is reading', async () => {
+    const uri = 'someUri'
+    const client = new DroppingReceiveMock()
+    const msgs: FromRunner[] = []
+    const notify = async (msg: FromRunner) => {
+      msgs.push(msg)
+    }
+    const reader = new ReaderInstance(uri, client as any, notify, logger)
+
+    // Unlike streams(), strings() drains the chunks eagerly inside
+    // pushStream(), so the dropped stream surfaces there instead of in the
+    // consumer's own loop.
+    const consumed = (async () => {
+      for await (const _msg of reader.strings()) {
+        // drain
+      }
+    })()
+    consumed.catch(() => {})
+
+    const rejections = await captureUnhandledRejections(async () => {
+      await reader.handleStreamingMessage({
+        channel: uri,
+        globalSequenceNumber: 7,
+      })
+
+      client.stream.emit('error', new Error('Connection dropped'))
+    })
+
+    expect(rejections).toEqual([])
+    // The failure ack is the only one: no success ack may follow it for the
+    // same sequence number.
+    expect(msgs.map((m) => m.processed)).toEqual([
+      {
+        channel: uri,
+        globalSequenceNumber: 7,
+        error: expect.stringMatching(/Connection dropped/),
+      },
+    ])
   })
 
   test('tells the orchestrator the message failed when the stream drops', async () => {
