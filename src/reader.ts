@@ -240,22 +240,47 @@ export class ReaderInstance implements Reader {
 
     const chunks = this.client.receiveStreamMessage()
 
+    // Exactly one `processed` reply may go out per message — the orchestrator
+    // takes it as the final word on this sequence number. Both the failure path
+    // (the stream's 'error' handler) and the success path (the Promise.all
+    // below) can fire, in either order: a connection can die before the
+    // consumers finish, but grpc-js can just as well report the RPC as failed
+    // after they already did. Whichever gets here first owns the ack.
+    let processedSent = false
+    const sendProcessed = (error?: string) => {
+      if (processedSent) return
+      processedSent = true
+      Promise.resolve(
+        this.notifyOrchestrator({
+          processed: error
+            ? { globalSequenceNumber, channel, error }
+            : { globalSequenceNumber, channel },
+        }),
+      ).catch((err) => {
+        // The connection that just died is the one we'd report over.
+        this.logger.debug(
+          `${this.uri} could not report message ${globalSequenceNumber}: ${err}`,
+        )
+      })
+    }
+
     // fanoutStream() forwards the failure to the consumers; this side reports it
     // back to the orchestrator, which would otherwise wait forever for the
     // `processed` reply that the Promise.all below can no longer send.
-    let streamFailed = false
     chunks.on('error', (err: Error) => {
-      streamFailed = true
+      if (processedSent) {
+        // The message was already acked as processed; this is the RPC itself
+        // failing afterwards (e.g. UNAVAILABLE because the status never
+        // arrived). Retracting a successful ack would be a lie.
+        this.logger.debug(
+          `${this.uri} stream ${globalSequenceNumber} errored after the message was processed: ${err.message}`,
+        )
+        return
+      }
       this.logger.error(
         `${this.uri} stream message ${globalSequenceNumber} dropped: ${err.message}`,
       )
-      Promise.resolve(
-        this.notifyOrchestrator({
-          processed: { globalSequenceNumber, channel, error: err.message },
-        }),
-      ).catch(() => {
-        // The connection that just died is the one we'd report over.
-      })
+      sendProcessed(err.message)
     })
 
     const writeControlMessage = promisify(chunks.write.bind(chunks))
@@ -296,12 +321,13 @@ export class ReaderInstance implements Reader {
 
     Promise.all(consumersConsumed).then(() => {
       // The 'error' handler above already reported this message as failed; a
-      // second `processed` for the same sequence number would double-ack it.
-      if (streamFailed) {
+      // second `processed` for the same sequence number would double-ack it,
+      // and the stream it ended on is already destroyed.
+      if (processedSent) {
         return
       }
       chunks.end()
-      this.notifyOrchestrator({ processed: { globalSequenceNumber, channel } })
+      sendProcessed()
     })
   }
 }

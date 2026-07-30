@@ -18,6 +18,7 @@ export interface RunnerStats {
   disconnectedAt?: number
   status: RunnerStatus
   grpcState: string
+  /** Keyed by `<role>:<uri>`; the same URI can appear once per role. */
   channels: Record<string, ChannelStats>
 }
 
@@ -90,8 +91,14 @@ export class State {
     const runner = this.runners.get(runnerId)
     if (!runner) return { recordMessage() {} }
 
-    if (!runner.channels[uri]) {
-      runner.channels[uri] = {
+    // A single channel URI can be both read and written inside one runner (a
+    // processor feeding another in the same pipeline), so the role is part of
+    // the key. Keying on the URI alone would merge the two directions into one
+    // record: one arbitrary role, counts and bytes summed across both, and
+    // reader traffic polluting the writer latency histogram.
+    const key = `${role}:${uri}`
+    if (!runner.channels[key]) {
+      runner.channels[key] = {
         uri,
         role,
         messageCount: 0,
@@ -101,7 +108,7 @@ export class State {
       }
     }
 
-    const channel = runner.channels[uri]
+    const channel = runner.channels[key]
     return {
       recordMessage(bytes: number, latencyMs?: number): void {
         channel.messageCount++

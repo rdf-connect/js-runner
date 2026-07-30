@@ -1,10 +1,11 @@
 import { createServer } from 'node:http'
 import { createServer as createTcpServer, Socket } from 'node:net'
 import { readFile } from 'node:fs/promises'
-import { dirname, resolve, relative } from 'node:path'
+import { dirname, resolve, relative, isAbsolute, sep } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import { Parser, DataFactory, Writer } from 'n3'
 import { extractShapes } from 'rdf-lens'
+import { createLogger, format, transports } from 'winston'
 import { start } from './client.js'
 import { State } from './state.js'
 import { createSocketProxy } from './socketProxy.js'
@@ -34,6 +35,24 @@ const OWL = createUriAndTermNamespace(
 const { lenses } = extractShapes(
   new Parser().parse($INLINE_FILE('./server_config_shape.ttl')),
 )
+
+// The standalone server has no orchestrator to stream logs to — RpcTransport is
+// per-runner and only exists once a pipeline connects — so it logs to its own
+// console. LOG_LEVEL=debug adds a line per served HTTP request.
+const logger = createLogger({
+  level: process.env['LOG_LEVEL'] ?? 'info',
+  transports: [
+    new transports.Console({
+      format: format.combine(
+        format.timestamp(),
+        format.printf(
+          ({ timestamp, level, message }) =>
+            `${timestamp} ${level.padEnd(5)} ${message}`,
+        ),
+      ),
+    }),
+  ],
+})
 
 interface ServerConfig {
   httpPort: number
@@ -169,7 +188,11 @@ export async function buildWhitelist(
     let content: string
     try {
       content = await readFile(filePath, { encoding: 'utf8' })
-    } catch {
+    } catch (err) {
+      // Stays whitelisted: a config listed by the user is still the path we
+      // want to serve if it reappears. But a typo'd path would otherwise only
+      // ever surface as a 404 on the orchestrator's side.
+      logger.warn(`Cannot read processor config ${filePath}: ${err}`)
       continue
     }
 
@@ -192,10 +215,59 @@ export async function buildWhitelist(
   return whitelist
 }
 
+export interface Routes {
+  /** Request path (e.g. `/processors/echo.ttl`) -> absolute file path. */
+  byPath: Map<string, string>
+  /** Absolute file path -> the request path it is served at. */
+  byFile: Map<string, string>
+  /**
+   * Whitelisted files that lie outside the config directory. The HTTP root maps
+   * onto that directory, so no request path can address them.
+   */
+  unreachable: string[]
+}
+
+/**
+ * Assigns every whitelisted file the request path it is served at, once, so
+ * that index.ttl and the HTTP handler cannot disagree.
+ *
+ * Deriving the two independently — `relative(cwd, file)` when advertising and
+ * `resolve(cwd, path)` when serving — is not a round trip for files outside
+ * `cwd`: `relative()` emits `../…`, which the orchestrator's URL resolution
+ * flattens against the server root before it ever reaches `resolve()`, so the
+ * advertised URL 403s. Such files have no valid URL here at all; they are
+ * reported separately rather than advertised.
+ */
+export function buildRoutes(files: Iterable<string>, cwd: string): Routes {
+  const byPath = new Map<string, string>()
+  const byFile = new Map<string, string>()
+  const unreachable: string[] = []
+
+  for (const file of files) {
+    const rel = relative(cwd, file)
+    if (
+      rel === '' ||
+      rel === '..' ||
+      rel.startsWith('..' + sep) ||
+      isAbsolute(rel)
+    ) {
+      unreachable.push(file)
+      continue
+    }
+
+    // Request paths are always '/'-separated, whatever the platform uses.
+    const path = '/' + rel.split(sep).join('/')
+    byPath.set(path, file)
+    byFile.set(file, path)
+  }
+
+  return { byPath, byFile, unreachable }
+}
+
 /**
  * Reduces a raw `req.url` to the path it addresses: query string dropped and
- * percent-escapes decoded. Both matter for the whitelist lookup, which is an
- * exact match against absolute paths — `/processors/echo.ttl?v=2` and
+ * percent-escapes decoded. Both matter for the route lookup, which is an exact
+ * match against the advertised paths — `/processors/echo.ttl?v=2` and
  * `/node_modules/%40rdfc/echo.ttl` must resolve to the same files as their
  * plain spellings instead of 403ing.
  *
@@ -272,7 +344,7 @@ function getIndexQuads() {
 
 export async function generateIndexTtl(
   processorPaths: string[],
-  cwd: string,
+  routes: Routes,
   hostname: string,
   grpcPort: number,
 ): Promise<string> {
@@ -295,10 +367,19 @@ export async function generateIndexTtl(
   )
 
   for (const desc of descriptions) {
-    const relPath = relative(cwd, desc.sourceFile)
+    const path = routes.byFile.get(desc.sourceFile)
+    if (path === undefined) {
+      // buildRoutes() already reported why; advertising the processor anyway
+      // would hand the orchestrator a URL this server answers with a 403.
+      logger.warn(
+        `Not advertising processor <${desc.uri}>: ${desc.sourceFile} is not reachable over HTTP`,
+      )
+      continue
+    }
+
     quads.push(
       quad(namedNode(desc.uri), RDF.terms.type, RDFC.terms.Processor),
-      quad(namedNode(desc.uri), RDFS.terms.isDefinedBy, namedNode(relPath)),
+      quad(namedNode(desc.uri), RDFS.terms.isDefinedBy, namedNode(path)),
     )
     if (desc.label) {
       quads.push(
@@ -342,9 +423,22 @@ export async function serve(configPath: string): Promise<void> {
   // against dirname(configPath), so the two must agree regardless of where
   // js-runner-server was invoked from.
   const cwd = dirname(absConfig)
+  const routes = buildRoutes(whitelist, cwd)
+
+  logger.info(`Serving config ${absConfig}`)
+  for (const [path, file] of routes.byPath) {
+    logger.info(`  ${path} -> ${file}`)
+  }
+  for (const file of routes.unreachable) {
+    logger.warn(
+      `Cannot serve ${file}: it lies outside the config directory ${cwd}, which the HTTP root maps onto. ` +
+        `Move it under that directory (or move ${absConfig} up to a common parent) to make it reachable.`,
+    )
+  }
+
   const indexTtl = await generateIndexTtl(
     processorPaths,
-    cwd,
+    routes,
     hostname,
     grpcPort,
   )
@@ -354,8 +448,8 @@ export async function serve(configPath: string): Promise<void> {
   const activeConnections = new Set<AbortController>()
 
   const shutdown = (signal: string) => {
-    console.log(
-      `\nReceived ${signal}, closing ${activeConnections.size} active gRPC connection(s)...`,
+    logger.info(
+      `Received ${signal}, closing ${activeConnections.size} active gRPC connection(s)...`,
     )
     for (const ctrl of activeConnections) ctrl.abort()
     tcpServer.close()
@@ -395,7 +489,7 @@ export async function serve(configPath: string): Promise<void> {
     try {
       const uri = await readLine(orchSocket)
       const connectedAt = Date.now()
-      console.log(`Orchestrator connected for runner URI: ${uri}`)
+      logger.info(`Orchestrator connected for runner URI: ${uri}`)
 
       const proxy = await createSocketProxy(orchSocket)
 
@@ -406,7 +500,7 @@ export async function serve(configPath: string): Promise<void> {
         // runner and calling start() against a dead socket — grpc-js would
         // still connect to the still-listening loopback server, then hang
         // piping from an already-destroyed source instead of failing fast.
-        console.error(
+        logger.error(
           `Orchestrator disconnected for runner URI ${uri} before gRPC bridge was ready: ${socketError.message}`,
         )
         proxy.close()
@@ -420,14 +514,14 @@ export async function serve(configPath: string): Promise<void> {
       start(proxy.target, uri, absConfig, ctrl.signal, state, runnerId)
         .catch((err) => {
           const message = err instanceof Error ? err.message : String(err)
-          console.error(
+          logger.error(
             `gRPC connection error for runner URI ${uri}: ${message}`,
           )
           state.markError(runnerId)
         })
         .finally(() => {
           const connectedSecs = ((Date.now() - connectedAt) / 1000).toFixed(1)
-          console.log(
+          logger.info(
             `Orchestrator disconnected for runner URI: ${uri} (connected for ${connectedSecs}s)`,
           )
           activeConnections.delete(ctrl)
@@ -435,7 +529,7 @@ export async function serve(configPath: string): Promise<void> {
           state.deregisterRunner(runnerId)
         })
     } catch (err) {
-      console.error('TCP handler error:', err)
+      logger.error(`TCP handler error: ${err}`)
       orchSocket.destroy()
     }
   })
@@ -446,10 +540,13 @@ export async function serve(configPath: string): Promise<void> {
     const path = parseRequestPath(req.url ?? '/')
 
     if (path === undefined) {
+      logger.warn(`400 ${method} ${req.url}: malformed request URL`)
       res.writeHead(400, { 'Content-Type': 'text/plain' })
       res.end('Bad request')
       return
     }
+
+    logger.debug(`${method} ${path}`)
 
     // --- Health check ---
     if (method === 'GET' && path === '/health') {
@@ -490,9 +587,14 @@ export async function serve(configPath: string): Promise<void> {
 
     // --- Whitelisted processor files ---
     if (method === 'GET') {
-      const absPath = resolve(cwd, path.startsWith('/') ? path.slice(1) : path)
+      // Exact lookup in the same table index.ttl was generated from, so an
+      // advertised URL is by construction a servable one.
+      const absPath = routes.byPath.get(path)
 
-      if (!whitelist.has(absPath)) {
+      if (absPath === undefined) {
+        logger.warn(
+          `403 GET ${path}: not one of the ${routes.byPath.size} served processor config(s)`,
+        )
         res.writeHead(403, { 'Content-Type': 'text/plain' })
         res.end('Forbidden')
         return
@@ -501,7 +603,11 @@ export async function serve(configPath: string): Promise<void> {
       let content: string
       try {
         content = await readFile(absPath, { encoding: 'utf8' })
-      } catch {
+      } catch (err) {
+        // The path is one the config named, so this is a real problem rather
+        // than a stray request: the file is missing (buildWhitelist warned
+        // about that at startup) or unreadable.
+        logger.error(`404 GET ${path}: cannot read ${absPath}: ${err}`)
         res.writeHead(404, { 'Content-Type': 'text/plain' })
         res.end('Not found')
         return
@@ -512,6 +618,7 @@ export async function serve(configPath: string): Promise<void> {
       return
     }
 
+    logger.warn(`404 ${method} ${path}: no such route`)
     res.writeHead(404, { 'Content-Type': 'text/plain' })
     res.end('Not found')
   })
@@ -526,17 +633,17 @@ export async function serve(configPath: string): Promise<void> {
       new Promise<void>((res, rej) => {
         tcpServer.once('error', rej)
         tcpServer.listen(grpcPort, () => {
-          console.log(`js-runner gRPC TCP server listening on port ${grpcPort}`)
+          logger.info(`js-runner gRPC TCP server listening on port ${grpcPort}`)
           res()
         })
       }),
       new Promise<void>((res, rej) => {
         server.once('error', rej)
         server.listen(httpPort, () => {
-          console.log(`js-runner HTTP server listening on port ${httpPort}`)
-          console.log(`  Dashboard: http://localhost:${httpPort}/dashboard`)
-          console.log(`  Health:    http://localhost:${httpPort}/health`)
-          console.log(`  State API: http://localhost:${httpPort}/api/state`)
+          logger.info(`js-runner HTTP server listening on port ${httpPort}`)
+          logger.info(`  Dashboard: http://localhost:${httpPort}/dashboard`)
+          logger.info(`  Health:    http://localhost:${httpPort}/health`)
+          logger.info(`  State API: http://localhost:${httpPort}/api/state`)
           res()
         })
       }),

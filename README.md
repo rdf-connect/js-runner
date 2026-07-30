@@ -76,6 +76,8 @@ This enables the user to configure the pipeline just like a normal pipeline. The
 
 The orchestrator connects to `runner:grpc` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
 
+Every `rdfc:processorConfig` (and everything it `owl:imports`) is served at its path relative to the directory holding `server.ttl`, so it must live under that directory — the server logs the full URL-to-file table on startup, and warns about any file it cannot reach. Set `LOG_LEVEL=debug` to also log every HTTP request it handles.
+
 There is an example in the `./examples/echo` directory. Start the server with the command `npx js-runner-server ./server.ttl`, then run the pipeline with the command `npx rdfc ./remote_pipeline.ttl`.
 
 ## Logging

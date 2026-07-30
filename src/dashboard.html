@@ -192,7 +192,8 @@
         <tbody>
           ${entries
             .map((ch) => {
-              const key = runnerId + ':' + ch.uri
+              // Role included: one runner can read and write the same URI.
+              const key = runnerId + ':' + ch.role + ':' + ch.uri
               const tp = throughput(key, ch.messageCount)
               return `<tr>
               <td class="uri" title="${esc(ch.uri)}">${esc(ch.uri)}</td>

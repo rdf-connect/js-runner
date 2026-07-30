@@ -113,6 +113,46 @@ describe('ReaderInstance', () => {
     ])
   })
 
+  test('does not retract the ack when the stream errors after processing', async () => {
+    const uri = 'someUri'
+    const client = new DroppingReceiveMock()
+    const msgs: FromRunner[] = []
+    const notify = async (msg: FromRunner) => {
+      msgs.push(msg)
+    }
+    const reader = new ReaderInstance(uri, client as any, notify, logger)
+
+    const consumed = (async () => {
+      for await (const stream of reader.streams()) {
+        for await (const _chunk of stream) {
+          // drain
+        }
+      }
+    })()
+    consumed.catch(() => {})
+
+    await reader.handleStreamingMessage({
+      channel: uri,
+      globalSequenceNumber: 7,
+    })
+
+    // The stream completes normally: every consumer finishes and the success
+    // ack goes out.
+    client.stream.push(null)
+    await new Promise((res) => setTimeout(res, 10))
+
+    const acked = [{ channel: uri, globalSequenceNumber: 7 }]
+    expect(msgs.map((m) => m.processed)).toEqual(acked)
+
+    // grpc-js can still fail the RPC afterwards (e.g. UNAVAILABLE because the
+    // status never arrived on a dropped connection). That must not send a
+    // second, contradictory `processed` for a message already reported done.
+    client.stream.emit('error', new Error('Connection dropped'))
+    await new Promise((res) => setTimeout(res, 10))
+
+    expect(msgs.map((m) => m.processed)).toEqual(acked)
+  })
+
   test('tells the orchestrator the message failed when the stream drops', async () => {
     const uri = 'someUri'
     const client = new DroppingReceiveMock()

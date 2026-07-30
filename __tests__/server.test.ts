@@ -3,11 +3,18 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer, Server } from 'node:net'
+import { Parser } from 'n3'
 
 // server.ts uses $INLINE_FILE, which only the ts-patch build applies — vitest's
 // esbuild transform would leave the macro unresolved. `npm test` builds first,
 // so import the built module here.
-import { parseRequestPath, parseServerConfig, serve } from '../lib/server.js'
+import {
+  buildRoutes,
+  generateIndexTtl,
+  parseRequestPath,
+  parseServerConfig,
+  serve,
+} from '../lib/server.js'
 
 const tempDirs: string[] = []
 const openServers: Server[] = []
@@ -74,6 +81,83 @@ describe('parseRequestPath', () => {
 
   test('returns undefined for a malformed escape', () => {
     expect(parseRequestPath('/%zz')).toBeUndefined()
+  })
+})
+
+describe('buildRoutes', () => {
+  test('serves files under the config directory at their relative path', () => {
+    const routes = buildRoutes(
+      [join('/etc/rdfc', 'processors', 'echo.ttl')],
+      '/etc/rdfc',
+    )
+
+    expect([...routes.byPath]).toEqual([
+      ['/processors/echo.ttl', '/etc/rdfc/processors/echo.ttl'],
+    ])
+    expect(routes.byFile.get('/etc/rdfc/processors/echo.ttl')).toBe(
+      '/processors/echo.ttl',
+    )
+    expect(routes.unreachable).toEqual([])
+  })
+
+  test('reports files outside the config directory as unreachable', () => {
+    // relative() would give '../../opt/procs/echo.ttl' here; the orchestrator
+    // flattens that against the server root, so the file has no valid URL.
+    const routes = buildRoutes(['/opt/procs/echo.ttl'], '/etc/rdfc')
+
+    expect([...routes.byPath]).toEqual([])
+    expect(routes.unreachable).toEqual(['/opt/procs/echo.ttl'])
+  })
+
+  test('does not mistake a leading-dots filename for an escape', () => {
+    const routes = buildRoutes(['/etc/rdfc/..echo.ttl'], '/etc/rdfc')
+
+    expect(routes.byPath.get('/..echo.ttl')).toBe('/etc/rdfc/..echo.ttl')
+    expect(routes.unreachable).toEqual([])
+  })
+})
+
+describe('generateIndexTtl', () => {
+  test('advertises only paths the server can answer', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'js-runner-index-'))
+    tempDirs.push(dir)
+    const outside = await mkdtemp(join(tmpdir(), 'js-runner-outside-'))
+    tempDirs.push(outside)
+
+    const inside = join(dir, 'echo.ttl')
+    const external = join(outside, 'log.ttl')
+    await writeFile(
+      inside,
+      '@prefix rdfc: <https://w3id.org/rdf-connect#>.\nrdfc:EchoProcessor rdfc:jsImplementationOf rdfc:Processor.',
+    )
+    await writeFile(
+      external,
+      '@prefix rdfc: <https://w3id.org/rdf-connect#>.\nrdfc:LogProcessor rdfc:jsImplementationOf rdfc:Processor.',
+    )
+
+    const routes = buildRoutes([inside, external], dir)
+    const ttl = await generateIndexTtl(
+      [inside, external],
+      routes,
+      'localhost',
+      50051,
+    )
+
+    // Parsed the way an orchestrator would: relative to the index URL.
+    const quads = new Parser({ baseIRI: 'http://example.org/' }).parse(ttl)
+    const definedBy = quads
+      .filter(
+        (q) =>
+          q.predicate.value ===
+          'http://www.w3.org/2000/01/rdf-schema#isDefinedBy',
+      )
+      .map((q) => q.object.value)
+
+    expect(definedBy).toEqual(['http://example.org/echo.ttl'])
+    // Every advertised URL must resolve back to a served route.
+    for (const url of definedBy) {
+      expect(routes.byPath.has(new URL(url).pathname)).toBe(true)
+    }
   })
 })
 
