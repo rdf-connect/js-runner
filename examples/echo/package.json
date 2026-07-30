@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@rdfc/http-utils-processor-ts": "^1.2.0-alpha.1",
     "@rdfc/js-runner": "file:../.."
   },
   "devDependencies": {

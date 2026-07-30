@@ -32,6 +32,54 @@ You can install the js-runner package using the following command:
 npm install @rdfc/js-runner
 ```
 
+### Remote runner usage
+
+The js-runner can also be used as a remote runner. To do this, start the runner server using `npx js-runner-server ./server.ttl`.
+This starts the remote server as configured in `server.ttl`
+
+```turtle
+# example server.ttl
+
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+<> a rdfc:JsRunnerServer;
+  rdfc:httpPort 3000;
+  rdfc:grpcPort 4001;
+  # number of disconnected runners to keep for the dashboard (default: 5, -1 = keep all)
+  rdfc:historySize 5;
+  # one or more processor definition files to host
+  rdfc:processorConfig <./processors/echo.ttl>,
+    <./processors/send.ttl>,
+    <./processors/log.ttl>,
+    <./node_modules/@rdfc/http-utils-processor-ts/server.ttl>.
+```
+
+This enables the user to configure the pipeline just like a normal pipeline. The runner definition is automatically available at `localhost:{httpPort}`.
+
+```turtle
+# Example pipeline file using the remote runner
+
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+<> owl:imports <http://localhost:3000/>, # runner definition
+    <http://localhost:3000/processors/log.ttl>, # log processor definition
+    <http://localhost:3000/processors/send.ttl>. # send processor definition
+
+# setup the pipeline
+<> a rdfc:Pipeline;
+  rdfc:consistsOf [
+    rdfc:processor <logProc>, <sendProc>;
+    rdfc:instantiates <http://localhost:3000/jsRunner>;
+  ].
+```
+
+The orchestrator connects to `runner:grpc` over plain TCP, sends the runner URI, and the js-runner reverse-upgrades the socket to carry the gRPC connection.
+
+Every `rdfc:processorConfig` (and everything it `owl:imports`) is served at its path relative to the directory holding `server.ttl`, so it must live under that directory — the server logs the full URL-to-file table on startup, and warns about any file it cannot reach. Set `LOG_LEVEL=debug` to also log every HTTP request it handles.
+
+There is an example in the `./examples/echo` directory. Start the server with the command `npx js-runner-server ./server.ttl`, then run the pipeline with the command `npx rdfc ./remote_pipeline.ttl`.
+
 ## Logging
 
 The JavaScript runner and processors use the `winston` logging library for logging.
@@ -90,7 +138,7 @@ JavaScript/TypeScript processors must include the JavaScript specific configurat
 
 The JavaScript runner is implemented in TypeScript.
 The source code is contained in the `src` folder.
-The main cli entry point is the `bin/runner.js` file, which you can also run after installation of the package using `npx js-runner`.
+The main cli entry points are the `bin/runner.js` and `bin/server.js` files, which you can also run after installation of the package using `npx js-runner` and `npx js-runner-server` respectively.
 
 If you want to get started with the development of the js-runner, you can clone the repository and install the dependencies using the following commands.
 

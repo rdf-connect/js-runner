@@ -1,0 +1,24 @@
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+
+rdfc:EchoProcessor rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:entrypoint <../>;
+  rdfc:file <../lib/processors.js>;
+  rdfc:class "EchoProcessor".
+
+[ ] a sh:NodeShape;
+  sh:targetClass rdfc:EchoProcessor;
+  sh:property [
+    sh:path rdfc:reader;
+    sh:name "reader";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Reader;
+  ], [
+    sh:path rdfc:writer;
+    sh:name "writer";
+    sh:minCount 1;
+    sh:maxCount 1;
+    sh:class rdfc:Writer;
+  ].
+
