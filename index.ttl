@@ -22,22 +22,30 @@ sds:implementationOf rdfs:subPropertyOf rdfs:subClassOf.
 rdfc:jsImplementationOf rdfs:subPropertyOf sds:implementationOf.
 [ ] a sh:NodeShape;
   sh:targetSubjectsOf rdfc:jsImplementationOf;
-  sh:property [
-    sh:path rdfc:entrypoint;
-    sh:name "location";
-    sh:minCount 1;
-    sh:maxCount 1;
-    sh:datatype xsd:string;
-  ], [
-    sh:path rdfc:file;
-    sh:name "file";
-    sh:minCount 1;
-    sh:maxCount 1;
-    sh:datatype xsd:string;
-  ], [
-    sh:path rdfc:class;
-    sh:name "clazz";
-    sh:maxCount 1;
-    sh:datatype xsd:string;
-  ].
+  sh:property <#entrypoint>, <#file>, <#class>.
+
+# A processor gives its entrypoint and file as IRIs relative to its own
+# definition rather than as string literals, so the datatype below is advisory:
+# it tells the extraction step to hand the value over as a string, and is not a
+# claim about the term. The annotation marks that one constraint as a warning
+# and leaves sh:minCount fatal, following SHACL 1.2 Core, section 3.1.4.
+#
+# These property shapes are named rather than blank because an annotation
+# cannot currently be written inside a blank node property list.
+<#entrypoint> sh:path rdfc:entrypoint;
+  sh:name "location";
+  sh:minCount 1;
+  sh:maxCount 1;
+  sh:datatype xsd:string {| sh:severity sh:Warning |} .
+
+<#file> sh:path rdfc:file;
+  sh:name "file";
+  sh:minCount 1;
+  sh:maxCount 1;
+  sh:datatype xsd:string {| sh:severity sh:Warning |} .
+
+<#class> sh:path rdfc:class;
+  sh:name "clazz";
+  sh:maxCount 1;
+  sh:datatype xsd:string.
 
