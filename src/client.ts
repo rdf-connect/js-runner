@@ -62,15 +62,26 @@ export async function start(
   })
 
   const stream = client.connect()
+  // The orchestrator ends the call once it read all this runner wrote
+  const callEnded = new Promise<void>((res) => {
+    stream.once('status', () => res())
+    stream.once('error', () => res())
+    stream.once('close', () => res())
+  })
 
-  const closeConnection = () => {
+  const closeConnection = async () => {
     stream.end()
     logStream.end()
+    // Closing the client, or exiting right after, drops what was written but
+    // not yet sent, such as why a processor failed to start, so give the
+    // orchestrator a moment to read it
+    await settledWithin(callEnded, 2_000)
     client.close()
   }
 
   const abortCtrl = signal ?? new AbortController().signal
-  abortCtrl.addEventListener('abort', closeConnection, { once: true })
+  const onAbort = () => void closeConnection()
+  abortCtrl.addEventListener('abort', onAbort, { once: true })
 
   if (state && runnerId) {
     watchGrpcState(client, state, runnerId, abortCtrl)
@@ -94,15 +105,32 @@ export async function start(
     await writable({ identify: { uri } })
 
     let runnerDone = false
+    // Why a processor did not start, which this runner reported to the
+    // orchestrator, and ends with once the orchestrator stops the pipeline
+    let startupError: unknown
     /* eslint-disable no-async-promise-executor */
     await new Promise(async (res, rej) => {
       try {
         for await (const chunk of stream) {
           const msg: ToRunner = chunk
           if (msg.proc) {
-            await runner.addProcessor(msg.proc)
+            try {
+              await runner.addProcessor(msg.proc)
+            } catch (err) {
+              // Keep reading: leaving the loop cancels the call, dropping the
+              // report that was not sent yet
+              startupError ??= err
+              if (state && runnerId) {
+                state.setStatus(runnerId, 'error')
+                state.markError(runnerId)
+              }
+            }
           }
-          if (msg.start) {
+          if (msg.start && startupError) {
+            // An orchestrator that does not stop the pipeline when a processor
+            // fails to start: do not run it without that processor
+            rej(startupError)
+          } else if (msg.start) {
             if (state && runnerId) state.setStatus(runnerId, 'running')
             runner.start().then(
               () => {
@@ -126,20 +154,36 @@ export async function start(
 
         // Stream ended without the runner completing normally
         if (!runnerDone) {
-          rej(new Error('gRPC stream ended before runner completed'))
+          rej(
+            startupError ??
+              new Error('gRPC stream ended before runner completed'),
+          )
         }
       } catch (err) {
         if (runnerDone) {
           // Stream error after runner finished (e.g. connection dropped during cleanup) — safe to ignore
           return
         }
-        rej(err)
+        rej(startupError ?? err)
       }
     })
 
     logger.info('All processors are finished')
   } finally {
-    abortCtrl.removeEventListener('abort', closeConnection)
-    closeConnection()
+    abortCtrl.removeEventListener('abort', onAbort)
+    await closeConnection()
   }
+}
+
+/**
+ * settledWithin waits for a promise to settle, or for ms to pass.
+ */
+function settledWithin(promise: Promise<unknown>, ms: number): Promise<void> {
+  return new Promise((res) => {
+    const timer = setTimeout(res, ms)
+    promise.finally(() => {
+      clearTimeout(timer)
+      res()
+    })
+  })
 }

@@ -50,6 +50,15 @@ type ProcessorConfig = {
 }
 
 export type FullProc<C> = C extends Proc<infer T> ? T & C : never
+
+/**
+ * describeError tells what went wrong. An rdf-lens lens with alternatives
+ * throws what each of them threw.
+ */
+function describeError(ex: unknown): string {
+  if (Array.isArray(ex)) return ex.map(describeError).join('; ')
+  return ex instanceof Error ? ex.message : String(ex)
+}
 export class Runner {
   private readonly readers: { [uri: string]: ReaderInstance } = {}
   private readonly writers: { [uri: string]: WriterInstance } = {}
@@ -150,9 +159,22 @@ export class Runner {
     proc: Processor,
   ): Promise<FullProc<P>> {
     this.logger.info(JSON.stringify(proc))
-    const instance = await this.createProcessor<P>(proc)
-
-    await instance.init()
+    let instance: FullProc<P>
+    try {
+      instance = await this.createProcessor<P>(proc)
+      await instance.init()
+    } catch (ex: unknown) {
+      // The orchestrator waits for this processor to start: tell it that it
+      // did not and why, as this runner's stderr may never reach it
+      const cause = describeError(ex)
+      extendLogger(this.logger, proc.uri).error(
+        `Processor failed to start: ${cause}`,
+      )
+      await this.notifyOrchestrator({
+        initialized: { uri: proc.uri, error: { cause } },
+      })
+      throw ex
+    }
 
     this.logger.info(`Initiated processor '${proc.uri}'`)
 
