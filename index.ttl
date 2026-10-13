@@ -27,13 +27,15 @@ rdfc:jsImplementationOf rdfs:subPropertyOf sds:implementationOf.
     sh:name "location";
     sh:minCount 1;
     sh:maxCount 1;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
   ], [
     sh:path rdfc:file;
     sh:name "file";
     sh:minCount 1;
     sh:maxCount 1;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
   ], [
     sh:path rdfc:class;
     sh:name "clazz";

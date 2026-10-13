@@ -18,6 +18,7 @@ rdfc:SendProcessor rdfc:jsImplementationOf rdfc:Processor;
   ], [
     sh:path rdfc:msg;
     sh:name "msgs";
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
   ].
 

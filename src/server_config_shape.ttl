@@ -27,6 +27,7 @@
   ], [
     sh:path rdfc:processorConfig;
     sh:name "processorConfigs";
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
   ].
 
