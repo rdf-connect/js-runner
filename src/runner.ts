@@ -14,7 +14,7 @@ import { Writer, WriterInstance } from './writer.js'
 import { Processor as Proc } from './processor.js'
 import { Logger } from 'winston'
 
-import { extendLogger } from './logger.js'
+import { extendLogger, withLensWarnings } from './logger.js'
 import { Cont, empty, extractShapes, Shapes } from 'rdf-lens'
 import { NamedNode, Parser } from 'n3'
 import { createNamespace, createUriAndTermNamespace, RDF } from '@treecg/types'
@@ -131,10 +131,12 @@ export class Runner {
     this.logger.info(
       `Parsing processor '${proc.uri}' of type(s) [${ty.join(', ')}]`,
     )
-    const args = this.shapes.lenses[RDFL.TypedExtract].execute({
-      id: new NamedNode(proc.uri),
-      quads: this.quads,
-    })
+    const args = withLensWarnings(procLogger, () =>
+      this.shapes.lenses[RDFL.TypedExtract].execute({
+        id: new NamedNode(proc.uri),
+        quads: this.quads,
+      }),
+    )
 
     const config: ProcessorConfig = JSON.parse(proc.config)
     const jsProgram = await import(this.makeRelative(config.file, this.uri))
@@ -268,16 +270,18 @@ export class Runner {
   private handlePipeline(pipeline: string) {
     try {
       const quads = new Parser().parse(pipeline)
-      this.shapes = extractShapes(
-        quads,
-        {
-          [RDFC.Reader]: (x: Cont) => this.createReader(x.id),
-          [RDFC.Writer]: (x: Cont) => this.createWriter(x.id),
-        },
-        {
-          [RDFC.Reader]: empty<Cont>(),
-          [RDFC.Writer]: empty<Cont>(),
-        },
+      this.shapes = withLensWarnings(this.logger, () =>
+        extractShapes(
+          quads,
+          {
+            [RDFC.Reader]: (x: Cont) => this.createReader(x.id),
+            [RDFC.Writer]: (x: Cont) => this.createWriter(x.id),
+          },
+          {
+            [RDFC.Reader]: empty<Cont>(),
+            [RDFC.Writer]: empty<Cont>(),
+          },
+        ),
       )
       this.quads = quads
     } catch (ex: unknown) {

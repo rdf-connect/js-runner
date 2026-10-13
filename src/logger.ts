@@ -1,5 +1,6 @@
 import { createLogger, LogEntry, Logger } from 'winston'
 import Transport from 'winston-transport'
+import { setWarningHandler } from 'rdf-lens'
 
 import * as grpc from '@grpc/grpc-js'
 import { LogMessage } from '@rdfc/proto'
@@ -52,6 +53,21 @@ export class RpcTransport extends Transport {
       entities: [...this.entities, entity],
       aliases: this.aliases,
     })
+  }
+}
+
+/**
+ * withLensWarnings runs fn with the warnings rdf-lens gives about shapes, such
+ * as a deprecated sh:datatype, logged to logger instead of console.warn. The
+ * handler is global and one process can host many runners, so it is only set
+ * for this synchronous call.
+ */
+export function withLensWarnings<T>(logger: Logger, fn: () => T): T {
+  setWarningHandler((message) => logger.warn(message))
+  try {
+    return fn()
+  } finally {
+    setWarningHandler()
   }
 }
 

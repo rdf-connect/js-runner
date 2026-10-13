@@ -7,6 +7,7 @@ import { Parser, DataFactory, Writer } from 'n3'
 import { extractShapes } from 'rdf-lens'
 import { createLogger, format, transports } from 'winston'
 import { start } from './client.js'
+import { withLensWarnings } from './logger.js'
 import { State } from './state.js'
 import { createSocketProxy } from './socketProxy.js'
 
@@ -146,10 +147,12 @@ export async function parseServerConfig(
     throw new Error(`No rdfc:JsRunnerServer found in ${absConfig}`)
   }
 
-  const config = lenses[RDFC.JsRunnerServer].execute({
-    id: serverSubject,
-    quads,
-  }) as {
+  const config = withLensWarnings(logger, () =>
+    lenses[RDFC.JsRunnerServer].execute({
+      id: serverSubject,
+      quads,
+    }),
+  ) as {
     httpPort?: number
     grpcPort?: number
     processorConfigs?: string[]
