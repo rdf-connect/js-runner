@@ -1,9 +1,9 @@
 import { glob, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, relative, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Parser, Store, Writer } from 'n3'
 import type { Quad } from '@rdfjs/types'
 import { createNamespace } from '@treecg/types'
+import { fromPath, toPath } from '@rdfc/utils-js'
 
 const OWL = createNamespace(
   'http://www.w3.org/2002/07/owl#',
@@ -25,9 +25,7 @@ function parseTurtle(
   quads: Quad[]
   prefixes: Record<string, string>
 } {
-  if (!baseIRI.startsWith('file:')) {
-    baseIRI = pathToFileURL(baseIRI).href
-  }
+  baseIRI = fromPath(baseIRI)
   const prefixes: Record<string, string> = {}
   const quads = new Parser({ baseIRI }).parse(turtle, null, (prefix, iri) => {
     prefixes[prefix] = typeof iri === 'string' ? iri : iri.value
@@ -93,11 +91,11 @@ export async function shacl2owl(
         q.predicate.value === OWL.imports &&
         q.object.termType === 'NamedNode' &&
         q.object.value.startsWith('file:') &&
-        isInside(fileURLToPath(q.object.value), outDirPath),
+        isInside(toPath(q.object.value), outDirPath),
     )?.object.value
     // `importIri` is a `file:` URL; convert it to a filesystem path before use.
     const outputPath = importIri
-      ? fileURLToPath(importIri)
+      ? toPath(importIri)
       : resolve(outDirPath, basename(input))
 
     const res = await fetch(endpoint, {

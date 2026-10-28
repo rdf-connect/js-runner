@@ -8,7 +8,7 @@ import {
   ReceivingMessage,
   ReceivingStreamMessage,
 } from '@rdfc/proto'
-import { pathToFileURL } from 'node:url'
+import { fromPath } from '@rdfc/utils-js'
 import { Reader, ReaderInstance } from './reader.js'
 import { Writer, WriterInstance } from './writer.js'
 import { Processor as Proc } from './processor.js'
@@ -111,7 +111,7 @@ export class Runner {
     const down = targetParts.slice(i)
 
     const thing = './' + [...up, ...down].join('/')
-    const configPath = this.configPath && pathToFileURL(this.configPath)
+    const configPath = this.configPath && fromPath(this.configPath)
     const final = new URL(thing, configPath)
     return final.href
   }
