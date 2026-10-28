@@ -64,6 +64,21 @@ describe('parseServerConfig', () => {
 
     expect(processorPaths).toEqual([join(configPath, '..', 'sub', 'procs.ttl')])
   })
+
+  test('turns a processorConfig written as an IRI into the path it names', async () => {
+    const configPath = await tempConfig(
+      '  rdfc:processorConfig <sub/my%20procs.ttl>, </etc/rdfc/procs.ttl>.',
+    )
+
+    const { processorPaths } = await parseServerConfig(configPath)
+
+    expect(processorPaths.sort()).toEqual(
+      [
+        '/etc/rdfc/procs.ttl',
+        join(configPath, '..', 'sub', 'my procs.ttl'),
+      ].sort(),
+    )
+  })
 })
 
 describe('parseRequestPath', () => {

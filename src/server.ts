@@ -2,9 +2,9 @@ import { createServer } from 'node:http'
 import { createServer as createTcpServer, Socket } from 'node:net'
 import { readFile } from 'node:fs/promises'
 import { dirname, resolve, relative, isAbsolute, sep } from 'node:path'
-import { pathToFileURL, fileURLToPath } from 'node:url'
 import { Parser, DataFactory, Writer } from 'n3'
 import { extractShapes } from 'rdf-lens'
+import { fromPath, toPath } from '@rdfc/utils-js'
 import { createLogger, format, transports } from 'winston'
 import { start } from './client.js'
 import { withLensWarnings } from './logger.js'
@@ -134,7 +134,7 @@ export async function parseServerConfig(
   const absConfig = resolve(configPath)
   const content = await readFile(absConfig, { encoding: 'utf8' })
   const quads = new Parser({
-    baseIRI: pathToFileURL(absConfig).toString(),
+    baseIRI: fromPath(absConfig),
   }).parse(content)
 
   const serverSubject = quads.find(
@@ -169,7 +169,7 @@ export async function parseServerConfig(
   // would load fine at startup but never match a request.
   const configDir = dirname(absConfig)
   const processorPaths = (config.processorConfigs ?? []).map((val) =>
-    val.startsWith('file://') ? fileURLToPath(val) : resolve(configDir, val),
+    toPath(val, configDir),
   )
 
   return { httpPort, grpcPort, processorPaths, hostname, historySize }
@@ -199,7 +199,7 @@ export async function buildWhitelist(
       continue
     }
 
-    const baseIRI = pathToFileURL(filePath).toString()
+    const baseIRI = fromPath(filePath)
     const quads = new Parser({ baseIRI }).parse(content)
 
     for (const quad of quads) {
@@ -209,7 +209,7 @@ export async function buildWhitelist(
       ) {
         const importVal = quad.object.value
         if (importVal.startsWith('file://')) {
-          todo.push(fileURLToPath(importVal))
+          todo.push(toPath(importVal))
         }
       }
     }
@@ -299,7 +299,7 @@ async function extractProcessorDescriptions(
       continue
     }
 
-    const baseIRI = pathToFileURL(filePath).toString()
+    const baseIRI = fromPath(filePath)
     const quads = new Parser({ baseIRI }).parse(content)
 
     const seen = new Set<string>()
