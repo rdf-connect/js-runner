@@ -72,6 +72,7 @@ describe('shacl2owl', () => {
 
   afterEach(async () => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
     await rm(dir, { recursive: true, force: true })
   })
@@ -205,11 +206,11 @@ ex:B a ex:Thing.
     expect(await readdir(outDir)).toEqual(['shared.ttl'])
   })
 
-  test('throws when the reasoning endpoint responds with a non-OK status', async () => {
+  test('throws when the reasoning endpoint responds with a client error', async () => {
     stubFetch(() => ({
       ok: false,
-      status: 500,
-      text: async () => 'boom',
+      status: 400,
+      text: async () => 'bad turtle',
     }))
     await writeFile(
       join(inDir, 'fail.ttl'),
@@ -218,6 +219,129 @@ ex:B a ex:Thing.
 
     await expect(shacl2owl(join(inDir, '*.ttl'), outDir)).rejects.toThrow(
       /Reasoning failed/,
+    )
+  })
+
+  test('warns and writes an empty placeholder when the endpoint fails server-side', async () => {
+    stubFetch(() => ({
+      ok: false,
+      status: 502,
+      text: async () => 'bad gateway',
+    }))
+    const warn = vi.spyOn(console, 'warn')
+    const target = join(outDir, 'ontology.ttl')
+    await writeFile(
+      join(inDir, 'shapes.ttl'),
+      `@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix ex: <http://example.org/>.
+<> owl:imports <${pathToFileURL(target).href}>.
+ex:A a ex:Thing.
+`,
+    )
+
+    await shacl2owl(join(inDir, '*.ttl'), outDir)
+
+    expect(warn).toHaveBeenCalled()
+    expect(existsSync(target)).toBe(true)
+    expect(toTripleSet(await readFile(target, 'utf8'), target).size).toBe(0)
+  })
+
+  test('warns and writes an empty placeholder when the endpoint is unreachable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed')
+      }),
+    )
+    const warn = vi.spyOn(console, 'warn')
+    await writeFile(
+      join(inDir, 'offline.ttl'),
+      `@prefix ex: <http://example.org/>.\nex:A a ex:Thing.\n`,
+    )
+
+    await shacl2owl(join(inDir, '*.ttl'), outDir)
+
+    expect(warn).toHaveBeenCalled()
+    const fallback = join(outDir, 'offline.ttl')
+    expect(existsSync(fallback)).toBe(true)
+    expect(toTripleSet(await readFile(fallback, 'utf8'), fallback).size).toBe(0)
+  })
+
+  test('warns and writes an empty placeholder when the endpoint times out', async () => {
+    vi.stubEnv('SHACL2OWL_TIMEOUT_MS', '10')
+    // Never respond; only settle once the request is aborted.
+    const fetchMock = vi.fn(
+      (_url: string, opts: { signal: AbortSignal }) =>
+        new Promise((_res, rej) =>
+          opts.signal.addEventListener('abort', () => rej(opts.signal.reason)),
+        ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const warn = vi.spyOn(console, 'warn')
+    await writeFile(
+      join(inDir, 'slow.ttl'),
+      `@prefix ex: <http://example.org/>.\nex:A a ex:Thing.\n`,
+    )
+
+    await shacl2owl(join(inDir, '*.ttl'), outDir)
+
+    expect(fetchMock).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/timeout/))
+    const fallback = join(outDir, 'slow.ttl')
+    expect(toTripleSet(await readFile(fallback, 'utf8'), fallback).size).toBe(0)
+  })
+
+  test('keeps an existing output file when the endpoint is unavailable', async () => {
+    stubFetch(() => ({
+      ok: false,
+      status: 503,
+      text: async () => 'unavailable',
+    }))
+    const previous = `@prefix ex: <http://example.org/>.\nex:Old a ex:Thing.\n`
+    await writeFile(join(outDir, 'kept.ttl'), previous)
+    await writeFile(
+      join(inDir, 'kept.ttl'),
+      `@prefix ex: <http://example.org/>.\nex:A a ex:Thing.\n`,
+    )
+
+    await shacl2owl(join(inDir, '*.ttl'), outDir)
+
+    expect(await readFile(join(outDir, 'kept.ttl'), 'utf8')).toBe(previous)
+  })
+
+  test('merges a later result into a placeholder written earlier in the run', async () => {
+    stubFetch((_url, opts) =>
+      opts.body.includes('ex:A')
+        ? { ok: false, status: 502, text: async () => 'bad gateway' }
+        : { ok: true, status: 200, text: async () => opts.body },
+    )
+    const target = join(outDir, 'shared.ttl')
+    const targetIri = pathToFileURL(target).href
+    await writeFile(
+      join(inDir, 'a.ttl'),
+      `@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix ex: <http://example.org/>.
+<> owl:imports <${targetIri}>.
+ex:A a ex:Thing.
+`,
+    )
+    await writeFile(
+      join(inDir, 'b.ttl'),
+      `@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix ex: <http://example.org/>.
+<> owl:imports <${targetIri}>.
+ex:B a ex:Thing.
+`,
+    )
+
+    await shacl2owl(join(inDir, '*.ttl'), outDir)
+
+    const merged = toTripleSet(await readFile(target, 'utf8'), target)
+    expect(merged).toContain(
+      'http://example.org/B http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://example.org/Thing NamedNode',
+    )
+    expect(merged).not.toContain(
+      'http://example.org/A http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://example.org/Thing NamedNode',
     )
   })
 
