@@ -258,7 +258,20 @@ export type ConfigType = {
 
 const OWL = createTermNamespace('http://www.w3.org/2002/07/owl#', 'imports')
 const processorShapes = extractShapes(new Parser().parse(shapeQuads))
-const base = 'https://w3id.org/rdf-connect#'
+const RDFCP = 'https://w3id.org/rdf-connect/processors#'
+const RDFC = 'https://w3id.org/rdf-connect#'
+
+/**
+ * Resolve a processor name against the rdfcp namespace, falling back to the
+ * rdfc namespace for processors that are not yet migrated.
+ */
+function resolveProcessor(name: string, quads: Quad[]): NamedNode {
+  const id = new NamedNode(RDFCP + name)
+  if (quads.some((q) => q.subject.equals(id))) {
+    return id
+  }
+  return new NamedNode(RDFC + name)
+}
 
 export async function importFile(
   file: string,
@@ -343,7 +356,7 @@ export class ProcHelper<T extends Processor<unknown>> {
   }
 
   getConfig(ty: string | NamedNode): ConfigType {
-    const id = typeof ty === 'string' ? new NamedNode(base + ty) : ty
+    const id = typeof ty === 'string' ? resolveProcessor(ty, this.quads) : ty
     const procConfig = <ConfigType>processorShapes.lenses[
       'JsProcessorShape'
     ].execute({
@@ -384,7 +397,7 @@ export async function getProcInline<T extends Processor<unknown>>(
   const procConfig = <ProcConfig>processorShapes.lenses[
     'JsProcessorShape'
   ].execute({
-    id: new NamedNode(base + ty),
+    id: resolveProcessor(ty, configQuads),
     quads: configQuads,
   })
 
@@ -413,7 +426,7 @@ export async function getProc<T extends Processor<unknown>>(
 ): Promise<FullProc<T>> {
   const configQuads = await importFile(configLocation)
   const procConfig = processorShapes.lenses['JsProcessorShape'].execute({
-    id: new NamedNode(base + ty),
+    id: resolveProcessor(ty, configQuads),
     quads: configQuads,
   })
 
