@@ -31,18 +31,19 @@ describe('Test processor', async () => {
 @prefix sh: <http://www.w3.org/ns/shacl#>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
 
-rdfc:Test a owl:Class;
+rdfcp:Test a owl:Class;
   rdfc:jsImplementationOf rdfc:Processor;
   rdfc:file <./__tests__/testProcessor.test.ts>;
   rdfc:class "TestProcessor";
   rdfc:entrypoint <./>.
 
 [ ] a sh:NodeShape;
-  sh:targetClass rdfc:Test;
+  sh:targetClass rdfcp:Test;
   sh:property [
     sh:datatype xsd:string;
-    sh:path rdfc:message;
+    sh:path rdfcp:message;
     sh:name "message";
     sh:maxCount 1;
     sh:minCount 1;
@@ -56,14 +57,54 @@ rdfc:Test a owl:Class;
 
     await helper.importInline(
       path.resolve('pipeline.ttl'),
-      `@prefix rdfc: <https://w3id.org/rdf-connect#>.
+      `@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
 
-<http://example.org/proc> a rdfc:Test;
-  rdfc:message "Hello world".`,
+<http://example.org/proc> a rdfcp:Test;
+  rdfcp:message "Hello world".`,
     )
 
     const proc = await helper.getProcessor('http://example.org/proc')
 
     expect(proc.message).toEqual('Hello world')
+  })
+})
+
+describe('ProcHelper.getConfig', async () => {
+  const definitions = `@prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
+
+rdfcp:Migrated rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:file <./migrated.js>;
+  rdfc:class "Migrated";
+  rdfc:entrypoint <./>.
+
+rdfc:Legacy rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:file <./legacy.js>;
+  rdfc:class "Legacy";
+  rdfc:entrypoint <./>.
+
+rdfcp:Both rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:file <./both.js>;
+  rdfc:class "BothRdfcp";
+  rdfc:entrypoint <./>.
+
+rdfc:Both rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:file <./both.js>;
+  rdfc:class "BothRdfc";
+  rdfc:entrypoint <./>.`
+
+  test('Resolves names in the rdfcp and rdfc namespace', async () => {
+    const helper = new ProcHelper<TestProcessor>()
+    await helper.importInline(path.resolve('config.ttl'), definitions)
+
+    expect(helper.getConfig('Migrated').clazz).toEqual('Migrated')
+    expect(helper.getConfig('Legacy').clazz).toEqual('Legacy')
+  })
+
+  test('Prefers the rdfcp namespace', async () => {
+    const helper = new ProcHelper<TestProcessor>()
+    await helper.importInline(path.resolve('config.ttl'), definitions)
+
+    expect(helper.getConfig('Both').clazz).toEqual('BothRdfcp')
   })
 })
