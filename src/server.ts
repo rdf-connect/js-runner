@@ -402,6 +402,7 @@ export async function generateIndexTtl(
       rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
       xsd: 'http://www.w3.org/2001/XMLSchema#',
       rdfc: 'https://w3id.org/rdf-connect#',
+      rdfcp: 'https://w3id.org/rdf-connect/processors#',
       sh: 'http://www.w3.org/ns/shacl#',
     },
   })
