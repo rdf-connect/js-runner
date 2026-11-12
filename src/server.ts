@@ -208,7 +208,7 @@ export async function buildWhitelist(
         quad.predicate.equals(OWL.terms.imports)
       ) {
         const importVal = quad.object.value
-        if (importVal.startsWith('file://')) {
+        if (importVal.startsWith('file:')) {
           todo.push(toPath(importVal))
         }
       }
