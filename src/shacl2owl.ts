@@ -47,7 +47,7 @@ function mergeTurtle(baseIRI: string, ...turtles: string[]): Promise<string> {
   const writer = new Writer({ prefixes })
   writer.addQuads(store.getQuads(null, null, null, null))
   return new Promise((res, rej) =>
-    writer.end((err, result) => (err ? rej(err) : res(result))),
+    writer.end((err, result) => (err ? rej(err) : res(result ?? ''))),
   )
 }
 

@@ -412,7 +412,7 @@ export async function generateIndexTtl(
   return await new Promise((res, rej) =>
     writer.end((e, result) => {
       if (e) rej(e)
-      res(result)
+      res(result ?? '')
     }),
   )
 }
