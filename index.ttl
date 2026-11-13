@@ -16,6 +16,11 @@ rdfc:BunRunner a rdfc:CommandRunner;
   rdfc:handlesSubjectsOf rdfc:jsImplementationOf;
   rdfc:command "bunx js-runner".
 
+rdfc:JsRunnerServer a owl:Class;
+  rdfs:subClassOf rdfc:RunnerServer;
+  rdfs:label "JavaScript Runner Server"@en;
+  rdfs:comment "The runner server of the JavaScript runner, started with js-runner-server and configured with the properties of rdfc:RunnerServer."@en.
+
 sds:Activity rdfs:subClassOf prov:Activity.
 rdfc:Processor rdfs:subClassOf sds:Activity.
 sds:implementationOf rdfs:subPropertyOf rdfs:subClassOf.
