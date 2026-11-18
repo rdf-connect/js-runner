@@ -4,6 +4,7 @@
   "main": "lib/index.js",
   "type": "module",
   "scripts": {
+    "prebuild": "ts-inline-file-invalidate",
     "build": "tspc && tsc-alias",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
@@ -35,7 +36,7 @@
   "license": "MIT",
   "description": "JavaScript runner implementation for RDF-Connect",
   "devDependencies": {
-    "@ajuvercr/ts-transformer-inline-file": "^0.2.0",
+    "@ajuvercr/ts-transformer-inline-file": "^0.2.1",
     "@eslint/js": "^10.0.1",
     "@rdfjs/types": "^2.0.1",
     "@types/jsonld": "^1.5.15",

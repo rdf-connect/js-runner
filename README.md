@@ -174,6 +174,11 @@ You can then build the project using:
 npm run build
 ```
 
+`src/dashboard.html`, `src/server_config_shape.ttl` and `index.ttl` are
+inlined into the build at compile time, so TypeScript does not see them as
+inputs. Before each build, `npm run build` drops `lib/.tsbuildinfo` if one of
+them is newer than it, forcing a full rebuild.
+
 Lastly, you can publish the package to npm using:
 
 ```bash
