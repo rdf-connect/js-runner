@@ -270,22 +270,23 @@ export class Runner {
   private async handleClose(close: Close) {
     const uri = close.channel
     const r = this.readers[uri]
+    const w = this.writers[uri]
 
-    let closed = false
+    // The orchestrator sends every close to every runner, so a channel this
+    // runner neither reads nor writes is expected and not worth more than a
+    // debug log.
+    if (!r && !w) {
+      this.logger.debug(
+        `Ignoring close of channel ${uri}, which no processor of this runner uses.`,
+      )
+      return
+    }
+
     if (r) {
       r.close()
-      closed = true
     }
-    const w = this.writers[uri]
     if (w) {
-      closed = true
       await w.close(true)
-    }
-
-    if (!closed) {
-      this.logger.error(
-        `Received a close event for channel ${uri}, but neither reader nor writer is present.`,
-      )
     }
   }
 
