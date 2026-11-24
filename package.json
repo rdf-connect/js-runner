@@ -3,6 +3,11 @@
   "version": "3.5.0-alpha.1",
   "main": "lib/index.js",
   "type": "module",
+  "files": [
+    "bin",
+    "lib",
+    "index.ttl"
+  ],
   "scripts": {
     "prebuild": "ts-inline-file-invalidate",
     "build": "tspc && tsc-alias",
