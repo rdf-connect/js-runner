@@ -46,7 +46,7 @@
     "@rdfjs/types": "^2.0.1",
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.26.6",
-    "@types/node": "^26.6.6",
+    "@types/node": "^26.6.7",
     "@typescript-eslint/eslint-plugin": "^8.74.0",
     "@typescript-eslint/parser": "^8.74.0",
     "@vitest/coverage-v8": "^5.1.1",
